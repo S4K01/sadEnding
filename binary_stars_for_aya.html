@@ -1,0 +1,3451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Binary Stars — For Aya (آيَة)</title>
+  <meta name="description" content="A lightweight interactive 3D space keepsake dedicated to Aya." />
+
+  <!-- Google Fonts: Amiri (Arabic calligraphy), Cinzel & Cormorant Garamond (Editorial serif), Inter (Clean UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    /* =========================================================================
+       1. BASE DESIGN TOKENS & FULL-SCREEN CANVAS FOUNDATION
+       ========================================================================= */
+    :root {
+      --bg-void: #030308;
+      --crimson: #ff2e55;
+      --sapphire: #2e8bff;
+      --gold: #f0d399;
+      --text-main: #f4f1f6;
+      --text-muted: rgba(226, 222, 236, 0.68);
+      --border-soft: rgba(244, 241, 246, 0.14);
+      --panel-bg: rgba(7, 7, 16, 0.78);
+      --panel-bg-strong: rgba(8, 8, 18, 0.9);
+      --ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-void);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    #scene-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 0;
+      cursor: grab;
+    }
+
+    #scene-canvas:active {
+      cursor: grabbing;
+    }
+
+    .space-vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(
+          circle at 50% 50%,
+          var(--ambient-glow, rgba(255, 46, 85, 0.08)) 0%,
+          transparent 58%
+        ),
+        radial-gradient(
+          circle at 50% 50%,
+          transparent 44%,
+          rgba(2, 2, 5, 0.84) 100%
+        );
+    }
+
+    /* =========================================================================
+       2. TOP BAR: CONTROLS & COLLAPSIBLE VERSE HEADER
+       ========================================================================= */
+    .ui-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: max(0.85rem, env(safe-area-inset-top)) 0.85rem max(1.15rem, env(safe-area-inset-bottom));
+    }
+
+    .top-controls-row {
+      position: fixed;
+      top: max(0.75rem, env(safe-area-inset-top));
+      left: 0.75rem;
+      right: 0.75rem;
+      z-index: 25;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.45rem;
+    }
+
+    .top-right-cluster {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      pointer-events: auto;
+    }
+
+    .top-left-cluster {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      pointer-events: auto;
+    }
+
+    .hud-pill-btn {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      padding: 0.46rem 0.78rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border-soft);
+      background: var(--panel-bg-strong);
+      color: var(--text-main);
+      font-size: 0.64rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.3s var(--ease-luxury), background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .hud-pill-btn:hover,
+    .hud-pill-btn.is-active {
+      border-color: rgba(240, 211, 153, 0.52);
+      background: rgba(16, 15, 30, 0.94);
+      color: var(--gold);
+    }
+
+    .audio-pill-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.34rem 0.65rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border-soft);
+      background: var(--panel-bg-strong);
+    }
+
+    .audio-pill-wrap.is-active {
+      border-color: rgba(240, 211, 153, 0.48);
+    }
+
+    .sound-btn-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      background: transparent;
+      border: none;
+      padding: 0.12rem 0.15rem;
+      color: var(--text-main);
+      font-size: 0.64rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .sound-bars {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 11px;
+      width: 12px;
+    }
+
+    .sound-bar {
+      width: 2px;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--text-muted);
+      transition: background-color 0.25s ease;
+    }
+
+    .audio-pill-wrap.is-active .sound-bar {
+      background: var(--gold);
+      animation: barPulse 1.3s ease-in-out infinite;
+    }
+
+    .audio-pill-wrap.is-active .sound-bar:nth-child(2) {
+      animation-delay: 0.22s;
+    }
+
+    .audio-pill-wrap.is-active .sound-bar:nth-child(3) {
+      animation-delay: 0.44s;
+    }
+
+    @keyframes barPulse {
+      0%, 100% { height: 3px; }
+      50% { height: 11px; }
+    }
+
+    .mini-vol-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 42px;
+      height: 2.5px;
+      border-radius: 999px;
+      background: rgba(244, 241, 246, 0.22);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .mini-vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+      border: 1px solid #fff;
+    }
+
+    .mini-vol-slider::-moz-range-thumb {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+      border: 1px solid #fff;
+    }
+
+    @media (max-width: 410px) {
+      .hud-pill-btn {
+        padding: 0.42rem 0.62rem;
+        font-size: 0.58rem;
+        letter-spacing: 0.1em;
+      }
+      .sound-btn-inline {
+        font-size: 0.58rem;
+        letter-spacing: 0.1em;
+      }
+      .mini-vol-slider {
+        width: 34px;
+      }
+    }
+
+    .top-bar {
+      position: relative;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding-top: 2.75rem;
+    }
+
+    /* Collapsible Calligraphy Card */
+    .verse-card {
+      pointer-events: auto;
+      width: min(94vw, 560px);
+      max-height: 38vh;
+      overflow-y: auto;
+      padding: 0.85rem 1.15rem 0.9rem;
+      border-radius: 16px;
+      background: rgba(7, 7, 16, 0.82);
+      border: 1px solid rgba(244, 241, 246, 0.13);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.62);
+      transition: opacity 0.45s var(--ease-luxury), transform 0.45s var(--ease-luxury);
+    }
+
+    .verse-card.is-collapsed {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.98);
+      pointer-events: none;
+    }
+
+    .verse-card-eyebrow {
+      margin: 0 0 0.25rem;
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.62rem;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .verse-arabic {
+      margin: 0;
+      font-family: 'Amiri', Georgia, serif;
+      font-weight: 700;
+      font-size: clamp(1.18rem, 4.1vw, 1.72rem);
+      line-height: 1.72;
+      color: #faf7fc;
+      direction: rtl;
+      unicode-bidi: isolate;
+      text-shadow:
+        0 0 16px rgba(46, 139, 255, 0.28),
+        0 0 26px rgba(255, 46, 85, 0.2);
+    }
+
+    .verse-arabic-secondary {
+      margin: 0.32rem 0 0;
+      font-family: 'Amiri', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(1.02rem, 3.5vw, 1.36rem);
+      line-height: 1.65;
+      color: rgba(240, 211, 153, 0.94);
+      direction: rtl;
+      unicode-bidi: isolate;
+    }
+
+    .verse-arabic-secondary:empty {
+      display: none;
+    }
+
+    .verse-caption {
+      margin: 0.42rem 0 0;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(0.88rem, 3.1vw, 1.04rem);
+      line-height: 1.42;
+      color: rgba(235, 230, 244, 0.86);
+    }
+
+    .verse-ref {
+      margin: 0.35rem 0 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.58rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(240, 211, 153, 0.68);
+    }
+
+    /* =========================================================================
+       3. LOWER INTERACTION DOCK: 4 CHAPTER PILLS + HOLD BUTTON
+       ========================================================================= */
+    .bottom-dock {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .chapter-pills {
+      pointer-events: auto;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.35rem;
+      width: min(94vw, 460px);
+      padding: 0.28rem;
+      border-radius: 9999px;
+      background: rgba(7, 7, 16, 0.86);
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.62);
+    }
+
+    .chapter-pill {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 9999px;
+      padding: 0.45rem 0.3rem;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.59rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.3s var(--ease-luxury);
+    }
+
+    .chapter-pill:hover {
+      color: var(--text-main);
+    }
+
+    .chapter-pill.is-active {
+      background: rgba(240, 211, 153, 0.14);
+      border-color: rgba(240, 211, 153, 0.48);
+      color: var(--gold);
+    }
+
+    /* Hold to Close the Distance Button */
+    .hold-btn-wrap {
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .hold-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: min(96vw, 460px);
+    }
+
+    .side-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      height: 44px;
+      padding: 0 0.85rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(240, 211, 153, 0.28);
+      background: var(--panel-bg-strong);
+      color: var(--gold);
+      font-size: 0.63rem;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+      transition: transform 0.25s var(--ease-luxury), border-color 0.3s ease, background-color 0.3s ease;
+    }
+
+    .side-action-btn:hover,
+    .side-action-btn:active {
+      border-color: rgba(240, 211, 153, 0.72);
+      background: rgba(22, 18, 36, 0.96);
+      transform: translateY(-1px);
+    }
+
+    .hold-btn {
+      position: relative;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      min-width: 214px;
+      flex: 1;
+      max-width: 264px;
+      padding: 0.78rem 1.05rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(244, 241, 246, 0.2);
+      background: var(--panel-bg-strong);
+      color: var(--text-main);
+      font-size: 0.71rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      touch-action: none;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.68);
+      transition: transform 0.25s var(--ease-luxury), border-color 0.3s ease;
+    }
+
+    .hold-btn:active,
+    .hold-btn.is-holding {
+      transform: scale(0.975);
+      border-color: rgba(240, 211, 153, 0.58);
+    }
+
+    .hold-progress-fill {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      transform-origin: left center;
+      transform: scaleX(0);
+      background: linear-gradient(
+        90deg,
+        rgba(255, 46, 85, 0.36),
+        rgba(240, 211, 153, 0.30),
+        rgba(46, 139, 255, 0.38)
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hold-btn-content {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.62rem;
+    }
+
+    .hold-ring-svg {
+      width: 18px;
+      height: 18px;
+      transform: rotate(-90deg);
+      flex-shrink: 0;
+    }
+
+    .hold-ring-track {
+      fill: none;
+      stroke: rgba(244, 241, 246, 0.2);
+      stroke-width: 2;
+    }
+
+    .hold-ring-bar {
+      fill: none;
+      stroke: var(--gold);
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-dasharray: 44;
+      stroke-dashoffset: 44;
+    }
+
+    .orbit-hint {
+      font-size: 0.59rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(226, 222, 236, 0.48);
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* =========================================================================
+       4. FINAL VOW SEAL OVERLAY (APPEARS AT 100% CONVERGENCE)
+       ========================================================================= */
+    .vow-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      background: rgba(3, 3, 8, 0.72);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.65s var(--ease-luxury), visibility 0.65s;
+    }
+
+    .vow-overlay.is-visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .vow-card {
+      width: min(92vw, 440px);
+      padding: 1.75rem 1.45rem 1.55rem;
+      border-radius: 22px;
+      background: rgba(8, 8, 18, 0.96);
+      border: 1px solid rgba(240, 211, 153, 0.42);
+      text-align: center;
+      transform: translateY(18px) scale(0.96);
+      transition: transform 0.65s var(--ease-luxury);
+      box-shadow:
+        0 24px 64px rgba(0, 0, 0, 0.85),
+        0 0 36px rgba(255, 46, 85, 0.16),
+        0 0 36px rgba(46, 139, 255, 0.16);
+    }
+
+    .vow-overlay.is-visible .vow-card {
+      transform: translateY(0) scale(1);
+    }
+
+    .vow-eyebrow {
+      margin: 0;
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .vow-arabic {
+      margin: 0.85rem 0 0;
+      font-family: 'Amiri', Georgia, serif;
+      font-weight: 700;
+      font-size: clamp(1.32rem, 4.8vw, 1.85rem);
+      line-height: 1.8;
+      color: #ffffff;
+      direction: rtl;
+      unicode-bidi: isolate;
+      text-shadow: 0 0 22px rgba(240, 211, 153, 0.28);
+    }
+
+    .vow-divider {
+      width: 90px;
+      height: 1px;
+      margin: 0.95rem auto;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .vow-message {
+      margin: 0;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: clamp(1.06rem, 3.8vw, 1.24rem);
+      line-height: 1.55;
+      color: rgba(244, 241, 246, 0.92);
+    }
+
+    .vow-signature {
+      margin: 0.7rem 0 0;
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.78rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .vow-signature .arabic-name {
+      font-family: 'Amiri', serif;
+      font-size: 1.25rem;
+      letter-spacing: 0;
+      text-transform: none;
+      color: #ffffff;
+      margin-left: 0.25rem;
+    }
+
+    .vow-actions {
+      margin-top: 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem;
+    }
+
+    .vow-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.56rem 1.05rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(244, 241, 246, 0.22);
+      background: rgba(16, 16, 32, 0.9);
+      color: var(--text-main);
+      font-size: 0.64rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s var(--ease-luxury);
+    }
+
+    .vow-btn:hover {
+      border-color: rgba(240, 211, 153, 0.55);
+    }
+
+    .vow-btn.is-locked {
+      border-color: var(--gold);
+      background: rgba(240, 211, 153, 0.16);
+      color: var(--gold);
+    }
+
+    .keep-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* =========================================================================
+       5. INTERACTIVE 3D MEMORY STAR MARKERS, MODALS & TOAST FEEDBACK
+       ========================================================================= */
+    #memory-markers-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 8;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .memory-star-marker {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: auto;
+      transform: translate(-50%, -50%);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.45rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      transition: opacity 0.35s ease;
+    }
+
+    .memory-star-diamond {
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+      transform: rotate(45deg);
+      border: 1.4px solid rgba(240, 211, 153, 0.92);
+      background: rgba(240, 211, 153, 0.28);
+      box-shadow: 0 0 12px rgba(240, 211, 153, 0.78);
+      animation: memoryPulse 2.8s ease-in-out infinite;
+    }
+
+    .memory-star-marker.is-read .memory-star-diamond {
+      border-color: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 0 8px rgba(142, 197, 255, 0.5);
+    }
+
+    .memory-star-tag {
+      padding: 0.14rem 0.46rem;
+      border-radius: 9999px;
+      background: rgba(7, 7, 16, 0.8);
+      border: 1px solid rgba(240, 211, 153, 0.32);
+      color: var(--gold);
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.54rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    @keyframes memoryPulse {
+      0%, 100% { transform: rotate(45deg) scale(0.92); opacity: 0.78; }
+      50% { transform: rotate(45deg) scale(1.22); opacity: 1; }
+    }
+
+    .modal-sheet-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.2rem;
+      background: rgba(3, 3, 8, 0.76);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.4s var(--ease-luxury), visibility 0.4s;
+    }
+
+    .modal-sheet-overlay.is-visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .modal-sheet-card {
+      width: min(92vw, 430px);
+      padding: 1.55rem 1.35rem 1.35rem;
+      border-radius: 20px;
+      background: rgba(8, 8, 19, 0.96);
+      border: 1px solid rgba(240, 211, 153, 0.38);
+      text-align: center;
+      transform: translateY(14px) scale(0.97);
+      transition: transform 0.4s var(--ease-luxury);
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.85),
+        0 0 28px rgba(46, 139, 255, 0.14),
+        0 0 28px rgba(255, 46, 85, 0.14);
+    }
+
+    .modal-sheet-overlay.is-visible .modal-sheet-card {
+      transform: translateY(0) scale(1);
+    }
+
+    .note-eyebrow {
+      margin: 0;
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.62rem;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .note-title {
+      margin: 0.45rem 0 0;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.45rem, 5vw, 1.85rem);
+      font-weight: 400;
+      color: #ffffff;
+    }
+
+    .note-body {
+      margin: 0.85rem 0 0;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: clamp(1.08rem, 3.9vw, 1.24rem);
+      line-height: 1.58;
+      color: rgba(244, 241, 246, 0.9);
+    }
+
+    .note-nav-row {
+      margin-top: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+    }
+
+    .dua-input {
+      width: 100%;
+      margin-top: 0.95rem;
+      padding: 0.78rem 0.95rem;
+      border-radius: 14px;
+      border: 1px solid rgba(240, 211, 153, 0.32);
+      background: rgba(4, 4, 11, 0.9);
+      color: #ffffff;
+      font-family: 'Inter', 'Amiri', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      text-align: center;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .dua-input:focus {
+      border-color: var(--gold);
+    }
+
+    .dua-chips {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .dua-chip {
+      padding: 0.36rem 0.7rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(244, 241, 246, 0.16);
+      background: rgba(16, 16, 30, 0.85);
+      color: rgba(244, 241, 246, 0.85);
+      font-family: 'Amiri', 'Inter', serif;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: border-color 0.25s ease, color 0.25s ease;
+    }
+
+    .dua-chip:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .dua-count-note {
+      margin: 0.7rem 0 0;
+      font-size: 0.64rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(240, 211, 153, 0.72);
+    }
+
+    #toast-pill {
+      position: fixed;
+      top: max(3.65rem, calc(env(safe-area-inset-top) + 3rem));
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      z-index: 60;
+      padding: 0.5rem 1.05rem;
+      border-radius: 9999px;
+      background: rgba(10, 10, 22, 0.95);
+      border: 1px solid rgba(240, 211, 153, 0.5);
+      color: var(--gold);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-align: center;
+      white-space: nowrap;
+      max-width: 90vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s var(--ease-luxury), transform 0.35s var(--ease-luxury);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.72);
+    }
+
+    #toast-pill.is-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 410px) {
+      .side-action-btn {
+        height: 40px;
+        padding: 0 0.68rem;
+        font-size: 0.57rem;
+      }
+      .hold-btn {
+        min-width: 174px;
+        font-size: 0.63rem;
+        padding: 0.7rem 0.8rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Full-Screen 3D WebGL Canvas -->
+  <canvas id="scene-canvas" aria-label="Interactive 3D Binary Stars and Space Whale"></canvas>
+  <div class="space-vignette" aria-hidden="true"></div>
+
+  <!-- Projected 3D Memory Star Tap Markers -->
+  <div id="memory-markers-layer" aria-label="Floating memory stars"></div>
+
+  <!-- Gentle Toast Feedback Pill -->
+  <div id="toast-pill" role="status" aria-live="polite"></div>
+
+  <!-- Top Controls Row: Verse & Cinema (Left) + Whale Cam & Quiet Piano (Right) -->
+  <div class="top-controls-row">
+    <div class="top-left-cluster">
+      <button
+        id="verse-toggle-btn"
+        class="hud-pill-btn is-active"
+        type="button"
+        aria-pressed="true"
+        aria-label="Hide or show verse card"
+      >
+        <span id="verse-toggle-label">Verse</span>
+      </button>
+
+      <button
+        id="cinema-btn"
+        class="hud-pill-btn"
+        type="button"
+        aria-pressed="false"
+        aria-label="Play auto-journey cinema mode"
+      >
+        <span id="cinema-label">Cinema</span>
+      </button>
+    </div>
+
+    <div class="top-right-cluster">
+      <button
+        id="whale-cam-btn"
+        class="hud-pill-btn"
+        type="button"
+        aria-pressed="false"
+        aria-label="Toggle Whale Cam view"
+      >
+        <span id="whale-cam-label">Whale Cam</span>
+      </button>
+
+      <div id="audio-pill-wrap" class="audio-pill-wrap">
+        <button
+          id="sound-toggle-btn"
+          class="sound-btn-inline"
+          type="button"
+          aria-pressed="false"
+          aria-label="Toggle quiet piano motif"
+        >
+          <span class="sound-bars" aria-hidden="true">
+            <span class="sound-bar"></span>
+            <span class="sound-bar"></span>
+            <span class="sound-bar"></span>
+          </span>
+          <span id="sound-label">Piano</span>
+        </button>
+        <input
+          id="piano-vol-slider"
+          class="mini-vol-slider"
+          type="range"
+          min="0"
+          max="0.28"
+          step="0.01"
+          value="0.12"
+          aria-label="Piano volume"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Minimalist Editorial Overlay -->
+  <div class="ui-layer">
+    <!-- Top Center: Collapsible Chapter Verse Card -->
+    <header class="top-bar">
+      <article id="verse-card" class="verse-card" aria-live="polite">
+        <p id="verse-eyebrow" class="verse-card-eyebrow">Chapter I · The Depths</p>
+        <p id="verse-arabic" class="verse-arabic" dir="rtl" lang="ar">
+          لَا إِلَٰهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ
+        </p>
+        <p id="verse-arabic-secondary" class="verse-arabic-secondary" dir="rtl" lang="ar"></p>
+        <p id="verse-caption" class="verse-caption">
+          “There is no deity except You; exalted are You. Indeed, I have been of the wrongdoers.” — Calling out across the depths, trusting Allah to bring us closer.
+        </p>
+        <p id="verse-ref" class="verse-ref">Surah Al-Anbiya · 21:87</p>
+      </article>
+    </header>
+
+    <!-- Bottom Center: 4 Celestial Chapters + Hold Interaction -->
+    <footer class="bottom-dock">
+      <nav class="chapter-pills" aria-label="Celestial Chapters">
+        <button type="button" class="chapter-pill is-active" data-chapter="0">I · Depths</button>
+        <button type="button" class="chapter-pill" data-chapter="1">II · Choice</button>
+        <button type="button" class="chapter-pill" data-chapter="2">III · Intent</button>
+        <button type="button" class="chapter-pill" data-chapter="3">IV · Effort</button>
+      </nav>
+
+      <div class="hold-btn-wrap">
+        <div class="hold-action-row">
+          <button
+            id="dua-open-btn"
+            class="side-action-btn"
+            type="button"
+            aria-label="Launch a Dua star into the sky"
+          >
+            <span>✦ Dua</span>
+          </button>
+
+          <button
+            id="hold-btn"
+            class="hold-btn"
+            type="button"
+            aria-label="Hold to close the distance between the two stars"
+          >
+            <span id="hold-progress-fill" class="hold-progress-fill" aria-hidden="true"></span>
+            <span class="hold-btn-content">
+              <svg class="hold-ring-svg" viewBox="0 0 18 18" aria-hidden="true">
+                <circle class="hold-ring-track" cx="9" cy="9" r="7"></circle>
+                <circle id="hold-ring-bar" class="hold-ring-bar" cx="9" cy="9" r="7"></circle>
+              </svg>
+              <span id="hold-btn-text">Hold to close the distance</span>
+            </span>
+          </button>
+
+          <button
+            id="save-wallpaper-btn"
+            class="side-action-btn"
+            type="button"
+            aria-label="Save current sky as phone wallpaper"
+          >
+            <span>Save</span>
+          </button>
+        </div>
+        <span class="orbit-hint">Drag to orbit · Tap golden stars to read notes</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Memory Star Whisper Note Modal -->
+  <div id="note-modal" class="modal-sheet-overlay" role="dialog" aria-modal="true" aria-label="Memory Star Note">
+    <div class="modal-sheet-card">
+      <p id="note-eyebrow" class="note-eyebrow">Star I of V</p>
+      <h3 id="note-title" class="note-title">Why You</h3>
+      <div class="vow-divider" aria-hidden="true"></div>
+      <p id="note-body" class="note-body"></p>
+      <div class="note-nav-row">
+        <button id="note-next-btn" class="vow-btn is-locked" type="button">Next Star ✦</button>
+        <button id="note-close-btn" class="vow-btn" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Launch a Dua / Wish Star Modal -->
+  <div id="dua-modal" class="modal-sheet-overlay" role="dialog" aria-modal="true" aria-label="Send a Dua into the sky">
+    <div class="modal-sheet-card">
+      <p class="note-eyebrow">Send a Prayer to the Stars</p>
+      <h3 class="note-title">Launch a Dua Star</h3>
+      <p class="verse-caption" style="margin-top: 0.45rem;">
+        Write a short Dua or wish—it will rise as a golden star and orbit here forever.
+      </p>
+      <input
+        id="dua-input"
+        class="dua-input"
+        type="text"
+        maxlength="90"
+        placeholder="Write your Dua or wish…"
+        autocomplete="off"
+      />
+      <div class="dua-chips">
+        <button type="button" class="dua-chip" dir="rtl" lang="ar" data-dua="اللَّهُمَّ اجْمَعْنَا عَلَى خَيْرٍ">
+          اللَّهُمَّ اجْمَعْنَا عَلَى خَيْرٍ
+        </button>
+        <button type="button" class="dua-chip" dir="rtl" lang="ar" data-dua="رَبِّ يَسِّرْ وَلَا تُعَسِّرْ">
+          رَبِّ يَسِّرْ وَلَا تُعَسِّرْ
+        </button>
+        <button type="button" class="dua-chip" data-dua="May Allah bring us closer soon">
+          Bring us closer soon
+        </button>
+      </div>
+      <p id="dua-count-note" class="dua-count-note">0 Duas orbiting in this sky</p>
+      <div class="note-nav-row">
+        <button id="dua-launch-btn" class="vow-btn is-locked" type="button">Launch Star ✦</button>
+        <button id="dua-close-btn" class="vow-btn" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dismissible Final Vow Seal Overlay (At 100% Convergence) -->
+  <div id="vow-overlay" class="vow-overlay" role="dialog" aria-modal="true" aria-label="Final Vow Seal">
+    <div class="vow-card">
+      <p class="vow-eyebrow">A Promise Across the Distance</p>
+      <p class="vow-arabic" dir="rtl" lang="ar">
+        لَا إِلَٰهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ
+      </p>
+      <div class="vow-divider" aria-hidden="true"></div>
+      <p class="vow-message">
+        Distance is only temporary. Your choice always comes first—and until the day I ask for your hand, I will work hard to be worthy of it.
+      </p>
+      <p class="vow-signature">
+        For Aya — <span class="arabic-name" dir="rtl" lang="ar">آيَة</span>
+      </p>
+      <div class="vow-actions">
+        <button id="keep-close-btn" class="vow-btn" type="button" aria-pressed="false">
+          <span class="keep-dot" aria-hidden="true"></span>
+          <span id="keep-close-label">Keep Them Close</span>
+        </button>
+        <button id="return-space-btn" class="vow-btn" type="button">
+          Return to Space
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    /* =========================================================================
+       MODULE 1: QUIET, ULTRA-LIGHTWEIGHT WEB AUDIO PIANO SYNTH
+       - No ConvolverNode (zero mobile CPU spikes)
+       - Soft warm oscillators + low-pass filter + gentle delay feedback
+       - Very quiet default volume (0.12)
+       - Plays sparse D-minor / F-major arpeggio + swells warmly when holding
+       ========================================================================= */
+    class QuietPianoSynth {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.dryGain = null;
+        this.delayInput = null;
+        this.isPlaying = false;
+        this.defaultVolume = 0.12;
+        this.timer = null;
+        this.noteIndex = 0;
+        this.chordTriggered = false;
+
+        // Sparse emotional D-minor / F-major arpeggio motif (MIDI notes)
+        this.motif = [
+          { midi: 50, vel: 0.24, dur: 2.4 }, // D3
+          { midi: 57, vel: 0.22, dur: 2.2 }, // A3
+          { midi: 62, vel: 0.28, dur: 2.6 }, // D4
+          { midi: 65, vel: 0.30, dur: 2.8 }, // F4
+          { midi: 69, vel: 0.27, dur: 2.6 }, // A4
+          { midi: 64, vel: 0.24, dur: 2.4 }, // E4
+          { midi: 53, vel: 0.23, dur: 2.5 }, // F3
+          { midi: 60, vel: 0.22, dur: 2.2 }, // C4
+          { midi: 65, vel: 0.29, dur: 2.7 }, // F4
+          { midi: 69, vel: 0.30, dur: 2.9 }, // A4
+          { midi: 72, vel: 0.26, dur: 3.0 }, // C5
+          { midi: 67, vel: 0.23, dur: 2.4 }, // G4
+          { midi: 55, vel: 0.22, dur: 2.4 }, // G3
+          { midi: 62, vel: 0.25, dur: 2.4 }, // D4
+          { midi: 65, vel: 0.27, dur: 2.6 }, // F4
+          { midi: 64, vel: 0.24, dur: 2.8 }, // E4
+        ];
+      }
+
+      midiToFreq(midi) {
+        return 440 * Math.pow(2, (midi - 69) / 12);
+      }
+
+      init() {
+        if (this.ctx) return true;
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return false;
+          this.ctx = new AudioCtx();
+
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.setValueAtTime(this.defaultVolume, this.ctx.currentTime);
+          this.masterGain.connect(this.ctx.destination);
+
+          this.dryGain = this.ctx.createGain();
+          this.dryGain.gain.setValueAtTime(0.76, this.ctx.currentTime);
+          this.dryGain.connect(this.masterGain);
+
+          // Soft space echo bus (lightweight delay + low-pass damping)
+          this.delayInput = this.ctx.createGain();
+          this.delayInput.gain.setValueAtTime(0.32, this.ctx.currentTime);
+
+          const delay = this.ctx.createDelay(1.0);
+          delay.delayTime.setValueAtTime(0.38, this.ctx.currentTime);
+
+          const damp = this.ctx.createBiquadFilter();
+          damp.type = 'lowpass';
+          damp.frequency.setValueAtTime(1450, this.ctx.currentTime);
+
+          const feedback = this.ctx.createGain();
+          feedback.gain.setValueAtTime(0.36, this.ctx.currentTime);
+
+          this.delayInput.connect(delay);
+          delay.connect(damp);
+          damp.connect(feedback);
+          feedback.connect(delay);
+          damp.connect(this.masterGain);
+
+          return true;
+        } catch (err) {
+          return false;
+        }
+      }
+
+      playNote(midi, velocity = 0.25, duration = 2.4, delayOffset = 0) {
+        if (!this.ctx || !this.dryGain) return;
+        const when = this.ctx.currentTime + delayOffset;
+        const freq = this.midiToFreq(midi);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(Math.min(2600, freq * 3.4), when);
+        filter.frequency.exponentialRampToValueAtTime(Math.max(260, freq * 1.25), when + duration * 0.85);
+
+        const env = this.ctx.createGain();
+        env.gain.setValueAtTime(0.0001, when);
+        env.gain.linearRampToValueAtTime(velocity * 0.55, when + 0.025);
+        env.gain.exponentialRampToValueAtTime(velocity * 0.18, when + 0.42);
+        env.gain.exponentialRampToValueAtTime(0.0001, when + duration + 0.6);
+
+        const osc1 = this.ctx.createOscillator();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(freq, when);
+
+        const osc2 = this.ctx.createOscillator();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(freq, when);
+        osc2.detune.setValueAtTime(1.5, when);
+
+        const g2 = this.ctx.createGain();
+        g2.gain.setValueAtTime(0.22, when);
+
+        osc1.connect(filter);
+        osc2.connect(g2).connect(filter);
+        filter.connect(env);
+        env.connect(this.dryGain);
+        env.connect(this.delayInput);
+
+        const stopAt = when + duration + 0.65;
+        osc1.start(when);
+        osc2.start(when);
+        osc1.stop(stopAt);
+        osc2.stop(stopAt);
+
+        osc1.onended = () => {
+          try {
+            osc1.disconnect();
+            osc2.disconnect();
+            g2.disconnect();
+            filter.disconnect();
+            env.disconnect();
+          } catch (e) {
+            // Safe ignore
+          }
+        };
+      }
+
+      /**
+       * Warm swelling harmonic chord triggered when the user holds to converge
+       */
+      playConvergenceSwell() {
+        if (!this.isPlaying || !this.ctx || this.chordTriggered) return;
+        this.chordTriggered = true;
+        // Soft Dm9 / Fmaj7 voicing rolled delicately
+        const chord = [50, 57, 65, 69, 76];
+        chord.forEach((midi, idx) => {
+          this.playNote(midi, 0.22, 3.6, idx * 0.11);
+        });
+      }
+
+      playHarmonicTap() {
+        if (!this.isPlaying || !this.ctx) return;
+        const pool = [69, 72, 74, 76, 77, 81];
+        const midi = pool[Math.floor(Math.random() * pool.length)];
+        this.playNote(midi, 0.21, 2.2, 0.01);
+      }
+
+      playChapterChime(chapterIdx) {
+        if (!this.isPlaying || !this.ctx) return;
+        const notes = [62, 65, 69, 74];
+        const midi = notes[chapterIdx % notes.length];
+        this.playNote(midi, 0.2, 2.4, 0.01);
+      }
+
+      playMemoryChime() {
+        if (!this.isPlaying || !this.ctx) return;
+        [69, 74, 77].forEach((midi, i) => {
+          this.playNote(midi, 0.2, 2.6, i * 0.08);
+        });
+      }
+
+      playWishLaunch() {
+        if (!this.isPlaying || !this.ctx) return;
+        [62, 69, 74, 81].forEach((midi, i) => {
+          this.playNote(midi, 0.21, 2.8, i * 0.09);
+        });
+      }
+
+      /**
+       * Ethereal Deep-Space Humpback Whale Song (Pure Web Audio, zero external files)
+       * Soft resonant pitch glide routed into the warm delay bus.
+       */
+      playWhaleSong() {
+        if (!this.isPlaying || !this.ctx || !this.delayInput) return;
+        try {
+          const now = this.ctx.currentTime + 0.03;
+          const dur = 3.2;
+
+          const osc = this.ctx.createOscillator();
+          const sub = this.ctx.createOscillator();
+          osc.type = 'sine';
+          sub.type = 'triangle';
+
+          // Gentle whale-call pitch contour (deep -> rising cry -> trailing sigh)
+          osc.frequency.setValueAtTime(148, now);
+          osc.frequency.exponentialRampToValueAtTime(246, now + 1.15);
+          osc.frequency.exponentialRampToValueAtTime(174, now + 2.3);
+          osc.frequency.exponentialRampToValueAtTime(126, now + dur);
+
+          sub.frequency.setValueAtTime(74, now);
+          sub.frequency.exponentialRampToValueAtTime(123, now + 1.15);
+          sub.frequency.exponentialRampToValueAtTime(63, now + dur);
+
+          const bp = this.ctx.createBiquadFilter();
+          bp.type = 'bandpass';
+          bp.frequency.setValueAtTime(220, now);
+          bp.frequency.exponentialRampToValueAtTime(340, now + 1.2);
+          bp.frequency.exponentialRampToValueAtTime(160, now + dur);
+          bp.Q.setValueAtTime(2.6, now);
+
+          const env = this.ctx.createGain();
+          env.gain.setValueAtTime(0.0001, now);
+          env.gain.linearRampToValueAtTime(0.18, now + 0.75);
+          env.gain.exponentialRampToValueAtTime(0.09, now + 2.1);
+          env.gain.exponentialRampToValueAtTime(0.0001, now + dur + 0.2);
+
+          const subGain = this.ctx.createGain();
+          subGain.gain.setValueAtTime(0.32, now);
+
+          osc.connect(bp);
+          sub.connect(subGain).connect(bp);
+          bp.connect(env);
+          env.connect(this.dryGain);
+          env.connect(this.delayInput);
+
+          osc.start(now);
+          sub.start(now);
+          osc.stop(now + dur + 0.25);
+          sub.stop(now + dur + 0.25);
+
+          osc.onended = () => {
+            try {
+              osc.disconnect();
+              sub.disconnect();
+              subGain.disconnect();
+              bp.disconnect();
+              env.disconnect();
+            } catch (e) {
+              // Safe ignore
+            }
+          };
+        } catch (err) {
+          // Safe ignore
+        }
+      }
+
+      setVolume(val) {
+        this.defaultVolume = Math.max(0, Math.min(0.28, Number(val)));
+        if (this.ctx && this.masterGain) {
+          this.masterGain.gain.setTargetAtTime(this.defaultVolume, this.ctx.currentTime, 0.06);
+        }
+      }
+
+      resetSwellGate() {
+        this.chordTriggered = false;
+      }
+
+      start() {
+        if (!this.init()) return false;
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+        if (this.isPlaying) return true;
+        this.isPlaying = true;
+
+        const step = () => {
+          if (!this.isPlaying) return;
+          const n = this.motif[this.noteIndex];
+          this.playNote(n.midi, n.vel, n.dur, 0.02);
+          this.noteIndex = (this.noteIndex + 1) % this.motif.length;
+        };
+
+        step();
+        this.timer = setInterval(step, 1380);
+        return true;
+      }
+
+      stop() {
+        this.isPlaying = false;
+        if (this.timer) {
+          clearInterval(this.timer);
+          this.timer = null;
+        }
+      }
+
+      toggle() {
+        if (this.isPlaying) {
+          this.stop();
+        } else {
+          this.start();
+        }
+        return this.isPlaying;
+      }
+    }
+
+    /* =========================================================================
+       MODULE 2: SINGLE SHARED RADIAL GLOW TEXTURE (ZERO POST-PROCESSING)
+       ========================================================================= */
+    function createSoftGlowTexture() {
+      const size = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const half = size / 2;
+
+      const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+      grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+      grad.addColorStop(0.16, 'rgba(255, 255, 255, 0.88)');
+      grad.addColorStop(0.42, 'rgba(255, 255, 255, 0.30)');
+      grad.addColorStop(0.75, 'rgba(255, 255, 255, 0.06)');
+      grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      return texture;
+    }
+
+    /* =========================================================================
+       MODULE 3: PROCEDURAL 3D PARTICLE HUMPBACK WHALE SCULPTOR (~800 PARTICLES)
+       Builds a clean, recognizable humpback whale in local coordinates:
+         +Z = forward (head/rostrum), -Z = tail flukes
+         +Y = dorsal, -Y = ventral
+         ±X = width & swept-back pectoral fins
+       Stores baseColors + bodyNormZ for zero-draw-call bioluminescent pulse.
+       ========================================================================= */
+    function buildParticleWhaleData(glowTexture) {
+      const basePositions = [];
+      const colors = [];
+      const partFlags = []; // 0 = body, 1 = pectoral fin, 2 = tail fluke, 3 = dorsal
+      const bodyNormZ = []; // 0 at nose -> 1 at tail tip
+
+      const cDorsal = new THREE.Color('#2e8bff');
+      const cMid = new THREE.Color('#8ec5ff');
+      const cBelly = new THREE.Color('#fff2dc');
+      const cCrimsonHint = new THREE.Color('#ff5c7c');
+      const tmpColor = new THREE.Color();
+
+      const pushParticle = (x, y, z, color, flag) => {
+        basePositions.push(x, y, z);
+        colors.push(color.r, color.g, color.b);
+        partFlags.push(flag);
+        bodyNormZ.push(THREE.MathUtils.clamp((3.0 - z) / 6.6, 0, 1));
+      };
+
+      // 1. BODY & ROSTRUM (~470 particles)
+      const bodyCount = 470;
+      for (let i = 0; i < bodyCount; i++) {
+        // Golden-ratio distribution along body length for smooth, even silhouette
+        const u = Math.pow((i + 0.5) / bodyCount, 0.94); // 0 = nose, 1 = tail stock
+        const z = 3.0 - u * 5.5;
+
+        // Streamlined humpback width (rx) and height (ry) profile
+        let rx, ry, yCenter;
+        if (u < 0.28) {
+          // Broad rounded rostrum & head
+          const t = u / 0.28;
+          const dome = Math.sin(t * Math.PI * 0.5);
+          rx = 0.08 + 0.64 * Math.pow(dome, 0.68);
+          ry = 0.06 + 0.54 * Math.pow(dome, 0.72);
+          yCenter = -0.04 * (1 - t);
+        } else {
+          // Sleek taper from torso to slender tail stock
+          const t = (u - 0.28) / 0.72;
+          rx = 0.72 * Math.pow(1 - t, 1.38) + 0.07;
+          ry = 0.60 * Math.pow(1 - t, 1.28) + 0.09;
+          yCenter = 0.08 * Math.sin(t * Math.PI);
+        }
+
+        // Angle around cross-section
+        const theta = i * 2.3999632; // Golden angle
+        const shellScale = 0.88 + 0.14 * ((i % 5) / 4);
+        const x = Math.cos(theta) * rx * shellScale;
+        let y = yCenter + Math.sin(theta) * ry * shellScale;
+
+        // Slightly deeper pleated throat pouch on ventral front
+        if (y < yCenter && u > 0.08 && u < 0.45) {
+          y -= 0.14 * Math.sin(((u - 0.08) / 0.37) * Math.PI);
+        }
+
+        // Color blending: sapphire dorsal, warm pearl-gold ventral belly
+        const ventralMix = THREE.MathUtils.clamp((0.25 - Math.sin(theta)) * 0.75, 0, 1);
+        tmpColor.copy(cDorsal).lerp(cMid, 0.35).lerp(cBelly, ventralMix);
+        if (u < 0.18 && Math.abs(Math.sin(theta)) < 0.3) {
+          tmpColor.lerp(cCrimsonHint, 0.22); // subtle starlight rim near snout
+        }
+        pushParticle(x, y, z, tmpColor, 0);
+      }
+
+      // 2. LONG SWEPT-BACK PECTORAL FINS (~160 particles: 80 left, 80 right)
+      const finCountPerSide = 80;
+      for (let side of [-1, 1]) {
+        for (let i = 0; i < finCountPerSide; i++) {
+          const s = (i + 0.5) / finCountPerSide; // 0 = shoulder, 1 = wingtip
+          const chord = ((i * 7) % 11) / 10 - 0.5; // -0.5 to +0.5 along fin width
+
+          // Sweeping outward, backward, and slightly downward
+          const span = 2.05;
+          const x = side * (0.52 + s * span);
+          const zCenter = 0.68 - Math.pow(s, 1.15) * 1.65;
+          const finChordWidth = (0.48 * (1 - s * 0.76)) * Math.sin(Math.min(1, s * 3.2) * Math.PI * 0.5);
+          const z = zCenter + chord * finChordWidth;
+          const y = -0.22 - s * 0.46 + Math.sin(s * Math.PI) * 0.08 + chord * 0.04;
+
+          tmpColor.copy(cMid).lerp(cBelly, 0.35 + s * 0.55);
+          if (chord > 0.25) tmpColor.lerp(cCrimsonHint, 0.18);
+          pushParticle(x, y, z, tmpColor, 1);
+        }
+      }
+
+      // 3. BROAD TAIL FLUKES (~120 particles)
+      const flukeCount = 120;
+      for (let i = 0; i < flukeCount; i++) {
+        const side = i % 2 === 0 ? 1 : -1;
+        const s = Math.floor(i / 2) / (flukeCount / 2); // 0 = center notch, 1 = fluke tip
+        const chord = ((i * 13) % 9) / 8; // 0 = leading edge, 1 = trailing edge
+
+        const x = side * (0.06 + s * 1.48);
+        // Swept crescent trailing edge
+        const zLeading = -2.42 - Math.pow(s, 1.15) * 0.75;
+        const zSpan = (0.72 * (1 - Math.pow(s, 1.5) * 0.78)) * (0.35 + 0.65 * Math.sin(s * Math.PI * 0.82 + 0.2));
+        const z = zLeading - chord * zSpan;
+        const y = 0.04 + (chord - 0.5) * 0.04 + s * 0.05;
+
+        tmpColor.copy(cDorsal).lerp(cBelly, 0.25 + chord * 0.5);
+        if (s > 0.72) tmpColor.lerp(cCrimsonHint, 0.28);
+        pushParticle(x, y, z, tmpColor, 2);
+      }
+
+      // 4. SMALL CURVED DORSAL FIN (~50 particles)
+      const dorsalCount = 50;
+      for (let i = 0; i < dorsalCount; i++) {
+        const s = i / dorsalCount; // 0 = front base, 1 = back edge
+        const hFrac = ((i * 17) % 10) / 10; // height fraction
+        const z = -0.55 - s * 0.78;
+        const finHeight = 0.36 * Math.sin(s * Math.PI) * (1 - 0.25 * s);
+        const y = 0.32 + hFrac * finHeight;
+        const x = ((i % 3) - 1) * 0.025 * (1 - hFrac);
+
+        tmpColor.copy(cMid).lerp(cBelly, hFrac * 0.65);
+        pushParticle(x, y, z, tmpColor, 3);
+      }
+
+      const count = basePositions.length / 3;
+      const baseArray = new Float32Array(basePositions);
+      const liveArray = new Float32Array(basePositions);
+      const baseColorArray = new Float32Array(colors);
+      const liveColorArray = new Float32Array(colors);
+      const normZArray = new Float32Array(bodyNormZ);
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(liveArray, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(liveColorArray, 3));
+
+      const material = new THREE.PointsMaterial({
+        size: 0.32,
+        map: glowTexture,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.92,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true,
+      });
+
+      const points = new THREE.Points(geometry, material);
+      points.frustumCulled = false;
+
+      return {
+        points,
+        geometry,
+        material,
+        baseArray,
+        liveArray,
+        baseColorArray,
+        liveColorArray,
+        normZArray,
+        partFlags,
+        count,
+      };
+    }
+
+    /* =========================================================================
+       MODULE 4: MAIN THREE.JS BINARY STARS & SPACE WHALE APPLICATION
+       - Total Draw Calls: 15 (strictly < 16)
+       - Capped DPR <= 1.5, Visibility-Pausing RAF, Custom Spherical Orbit + Whale Cam
+       ========================================================================= */
+    class BinaryStarsExperience {
+      constructor() {
+        this.canvas = document.getElementById('scene-canvas');
+        this.piano = new QuietPianoSynth();
+
+        // UI Elements
+        this.audioPillWrap = document.getElementById('audio-pill-wrap');
+        this.soundBtn = document.getElementById('sound-toggle-btn');
+        this.soundLabel = document.getElementById('sound-label');
+        this.volSlider = document.getElementById('piano-vol-slider');
+        this.verseToggleBtn = document.getElementById('verse-toggle-btn');
+        this.verseToggleLabel = document.getElementById('verse-toggle-label');
+        this.whaleCamBtn = document.getElementById('whale-cam-btn');
+        this.whaleCamLabel = document.getElementById('whale-cam-label');
+
+        this.verseCard = document.getElementById('verse-card');
+        this.verseEyebrow = document.getElementById('verse-eyebrow');
+        this.verseArabic = document.getElementById('verse-arabic');
+        this.verseArabicSecondary = document.getElementById('verse-arabic-secondary');
+        this.verseCaption = document.getElementById('verse-caption');
+        this.verseRef = document.getElementById('verse-ref');
+
+        this.chapterPills = document.querySelectorAll('.chapter-pill');
+        this.holdBtn = document.getElementById('hold-btn');
+        this.holdBtnText = document.getElementById('hold-btn-text');
+        this.holdProgressFill = document.getElementById('hold-progress-fill');
+        this.holdRingBar = document.getElementById('hold-ring-bar');
+
+        this.vowOverlay = document.getElementById('vow-overlay');
+        this.keepCloseBtn = document.getElementById('keep-close-btn');
+        this.keepCloseLabel = document.getElementById('keep-close-label');
+        this.returnSpaceBtn = document.getElementById('return-space-btn');
+
+        // New Interactive Feature UI Elements
+        this.memoryMarkersLayer = document.getElementById('memory-markers-layer');
+        this.toastPill = document.getElementById('toast-pill');
+        this.cinemaBtn = document.getElementById('cinema-btn');
+        this.cinemaLabel = document.getElementById('cinema-label');
+        this.duaOpenBtn = document.getElementById('dua-open-btn');
+        this.saveWallpaperBtn = document.getElementById('save-wallpaper-btn');
+
+        this.noteModal = document.getElementById('note-modal');
+        this.noteEyebrow = document.getElementById('note-eyebrow');
+        this.noteTitle = document.getElementById('note-title');
+        this.noteBody = document.getElementById('note-body');
+        this.noteNextBtn = document.getElementById('note-next-btn');
+        this.noteCloseBtn = document.getElementById('note-close-btn');
+
+        this.duaModal = document.getElementById('dua-modal');
+        this.duaInput = document.getElementById('dua-input');
+        this.duaChips = document.querySelectorAll('.dua-chip');
+        this.duaCountNote = document.getElementById('dua-count-note');
+        this.duaLaunchBtn = document.getElementById('dua-launch-btn');
+        this.duaCloseBtn = document.getElementById('dua-close-btn');
+
+        // 5 Personal Floating Memory Stars orbiting the Binary System
+        this.memoryNotes = [
+          {
+            tag: 'I · Soul',
+            eyebrow: 'Memory Star I of V',
+            title: 'Why It Was Always You',
+            body: 'I never fell for anything shallow or temporary. I love you for your heart, your mind, your quiet dignity, and the way your presence alone makes everything feel calm.',
+            orbitR: 9.8,
+            angle: 0.4,
+            yOff: 3.1,
+            speed: 0.11,
+            read: false,
+          },
+          {
+            tag: 'II · Honest',
+            eyebrow: 'Memory Star II of V',
+            title: 'No More Moving in Circles',
+            body: 'I am glad I stopped going in circles and told you the truth. Hearing you finally stop changing the subject and admit it too is a moment I will never forget, idiot.',
+            orbitR: 10.6,
+            angle: 1.7,
+            yOff: -2.4,
+            speed: 0.095,
+            read: false,
+          },
+          {
+            tag: 'III · Choice',
+            eyebrow: 'Memory Star III of V',
+            title: 'Your Choice Always Comes First',
+            body: 'Real love never pressures or corners. Just as the Prophet ﷺ taught, your consent and your peace are sacred to me—you will always be honored, respected, and free.',
+            orbitR: 11.2,
+            angle: 3.0,
+            yOff: 2.2,
+            speed: 0.105,
+            read: false,
+          },
+          {
+            tag: 'IV · Miles',
+            eyebrow: 'Memory Star IV of V',
+            title: 'Only Temporary Distance',
+            body: 'The miles between us are just geography. Two stars can be light-years apart and still move around each other—and I trust Allah to bring our paths together.',
+            orbitR: 10.1,
+            angle: 4.3,
+            yOff: -3.0,
+            speed: 0.12,
+            read: false,
+          },
+          {
+            tag: 'V · Promise',
+            eyebrow: 'Memory Star V of V',
+            title: 'Before Graduation',
+            body: 'Wanting to marry you is not just words. Every late night, every line of code, every step I build in college is so I can come ask for your hand properly before we graduate.',
+            orbitR: 11.0,
+            angle: 5.5,
+            yOff: 3.6,
+            speed: 0.09,
+            read: false,
+          },
+        ];
+        this.activeNoteIdx = 0;
+
+        // Cinema Auto-Journey & Toast State
+        this.cinemaMode = false;
+        this.cinemaTime = 0;
+        this.cinemaStage = -1;
+        this.toastTimer = null;
+
+        // Persisted Dua / Wish Stars (up to 24 orbiting golden stars)
+        this.maxWishStars = 24;
+        this.wishStars = this.loadSavedDuas();
+
+        // Curated 4 Celestial Chapters with Verified Islamic Verses
+        const isPortrait = window.innerHeight > window.innerWidth;
+        const baseR = isPortrait ? 27 : 20.5;
+        this.chapters = [
+          {
+            eyebrow: 'Chapter I · The Depths',
+            arabic: 'لَا إِلَٰهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ',
+            secondary: '',
+            caption:
+              '“There is no deity except You; exalted are You. Indeed, I have been of the wrongdoers.” — Calling out across the depths, trusting Allah to bring us closer.',
+            ref: 'Surah Al-Anbiya · 21:87',
+            cam: { theta: 0.35, phi: 1.24, radius: baseR },
+          },
+          {
+            eyebrow: 'Chapter II · Her Choice',
+            arabic: 'وَعَاشِرُوهُنَّ بِالْمَعْرُوفِ',
+            secondary: '«لَا تُنْكَحُ الْبِكْرُ حَتَّى تُسْتَأْذَنَ»',
+            caption:
+              '“And live with them in kindness.” — The Prophet ﷺ made her consent sacred. No pressure, no rush—your choice always comes first.',
+            ref: 'Surah An-Nisa · 4:19  &  Sahih al-Bukhari · 5136',
+            cam: { theta: 1.08, phi: 0.72, radius: baseR * 1.04 },
+          },
+          {
+            eyebrow: 'Chapter III · The Intention',
+            arabic: 'رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ وَاجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا',
+            secondary: 'وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً',
+            caption:
+              '“Our Lord, grant us from among our spouses and offspring comfort to our eyes...” — Not a passing chapter. I want to marry you the right way, in peace, affection, and mercy.',
+            ref: 'Surah Al-Furqan · 25:74  &  Surah Ar-Rum · 30:21',
+            cam: { theta: 0.0, phi: 1.38, radius: baseR * 0.96 },
+          },
+          {
+            eyebrow: 'Chapter IV · The Effort',
+            arabic: 'وَأَن لَّيْسَ لِلْإِنسَانِ إِلَّا مَا سَعَىٰ ۝ وَأَنَّ سَعْيَهُ سَوْفَ يُرَىٰ',
+            secondary: '',
+            caption:
+              '“And that there is not for man except that for which he strives, and that his effort is going to be seen.” — Wanting to marry you means earning it. Every day of work until graduation is for this promise.',
+            ref: 'Surah An-Najm · 53:39–40',
+            cam: { theta: -0.78, phi: 1.12, radius: baseR * 1.06 },
+          },
+        ];
+
+        this.activeChapter = 0;
+        this.verseVisible = true;
+        this.whaleCam = false;
+
+        // Interaction, Convergence & Bioluminescent Pulse State
+        this.isHolding = false;
+        this.keepClose = false;
+        this.convergence = 0;
+        this.pulseStrength = 0;
+        this.vowShown = false;
+        this.whalePulseProgress = 2.0; // > 1.3 means inactive
+
+        // Custom Spherical Camera Orbit State
+        this.camState = {
+          theta: 0.35,
+          phi: 1.24,
+          radius: baseR,
+          targetTheta: 0.35,
+          targetPhi: 1.24,
+          targetRadius: baseR,
+          isDragging: false,
+          downX: 0,
+          downY: 0,
+          downTime: 0,
+          lastX: 0,
+          lastY: 0,
+          movedDist: 0,
+        };
+
+        // Timing & Loop Control
+        this.clockTime = 0;
+        this.lastFrameTime = performance.now();
+        this.rafId = null;
+        this.isPaused = false;
+        this.meteorShowerTimer = 0;
+
+        // Reusable Three.js Vectors (Zero per-frame garbage collection)
+        this.starAPos = new THREE.Vector3();
+        this.starBPos = new THREE.Vector3();
+        this.whalePos = new THREE.Vector3();
+        this.whaleNextPos = new THREE.Vector3();
+        this.whaleForward = new THREE.Vector3();
+        this.whaleRight = new THREE.Vector3();
+        this.whaleUp = new THREE.Vector3();
+        this.worldUp = new THREE.Vector3(0, 1, 0);
+        this.rotMatrix = new THREE.Matrix4();
+        this.desiredCamPos = new THREE.Vector3();
+        this.currentLookAt = new THREE.Vector3(0, 0, 0);
+        this.desiredLookAt = new THREE.Vector3(0, 0, 0);
+        this.projVec = new THREE.Vector3();
+
+        // Reusable Background Chromatic Cycle Colors (Obsidian <-> Crimson & Black <-> Sapphire & Black + Binary Mix)
+        this.bgObsidian = new THREE.Color('#020206');
+        this.bgCrimsonBlack = new THREE.Color('#190309');
+        this.bgSapphireBlack = new THREE.Color('#030d1e');
+        this.bgUnityMix = new THREE.Color('#14061a');
+        this.bgLiveColor = new THREE.Color('#030308');
+        this.lastVignetteSync = 0;
+
+        this.initThree();
+        this.buildSceneObjects();
+        this.buildMemoryMarkers();
+        this.updateDuaCountUI();
+        this.bindCameraControls();
+        this.bindUIControls();
+        this.bindLifecycle();
+
+        this.animate = this.animate.bind(this);
+        this.startLoop();
+      }
+
+      initThree() {
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color('#030308');
+
+        this.camera = new THREE.PerspectiveCamera(
+          50,
+          window.innerWidth / window.innerHeight,
+          0.5,
+          260
+        );
+
+        this.renderer = new THREE.WebGLRenderer({
+          canvas: this.canvas,
+          antialias: false, // Additive particles look crisp without heavy MSAA cost
+          powerPreference: 'high-performance',
+        });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+        this.glowTexture = createSoftGlowTexture();
+      }
+
+      buildSceneObjects() {
+        // ---------------------------------------------------------------------
+        // 0. DEEP-SPACE NEBULA DEPTH (6 huge soft radial points, 1 draw call)
+        // ---------------------------------------------------------------------
+        const nebulaPos = new Float32Array([
+          -24, 10, -48,
+           26, -8, -52,
+            0, 16, -58,
+          -30, -14, -36,
+           28, 12, -38,
+            4, -18, -44,
+        ]);
+        const nebulaColors = new Float32Array([
+          0.55, 0.08, 0.22, // Deep Crimson
+          0.08, 0.20, 0.56, // Midnight Indigo
+          0.42, 0.30, 0.14, // Dark Gold
+          0.12, 0.14, 0.45, // Deep Sapphire
+          0.48, 0.10, 0.26, // Ruby Mist
+          0.32, 0.22, 0.12, // Warm Amber Dust
+        ]);
+        const nebGeo = new THREE.BufferGeometry();
+        nebGeo.setAttribute('position', new THREE.BufferAttribute(nebulaPos, 3));
+        nebGeo.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
+        this.nebulaColAttr = nebGeo.attributes.color;
+        const nebMat = new THREE.PointsMaterial({
+          size: 62,
+          map: this.glowTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.24,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          sizeAttenuation: true,
+        });
+        this.nebulaPoints = new THREE.Points(nebGeo, nebMat);
+        this.scene.add(this.nebulaPoints);
+
+        // ---------------------------------------------------------------------
+        // 1. DISTANT STARFIELD (~900 particles, 1 draw call)
+        // ---------------------------------------------------------------------
+        const starCount = 900;
+        const sfPositions = new Float32Array(starCount * 3);
+        const sfColors = new Float32Array(starCount * 3);
+        this.sfBaseColors = new Float32Array(starCount * 3);
+        this.sfPhases = new Float32Array(starCount);
+
+        const cWhite = new THREE.Color('#f4f2ff');
+        const cWarm = new THREE.Color('#ffdca8');
+        const cCool = new THREE.Color('#a6ccff');
+        const cTmp = new THREE.Color();
+
+        for (let i = 0; i < starCount; i++) {
+          const r = 42 + Math.random() * 110;
+          const u = Math.random() * 2 - 1;
+          const theta = Math.random() * Math.PI * 2;
+          const sqrtOneMinusU2 = Math.sqrt(1 - u * u);
+
+          sfPositions[i * 3] = r * sqrtOneMinusU2 * Math.cos(theta);
+          sfPositions[i * 3 + 1] = r * u;
+          sfPositions[i * 3 + 2] = r * sqrtOneMinusU2 * Math.sin(theta);
+
+          const pick = Math.random();
+          if (pick < 0.65) cTmp.copy(cWhite);
+          else if (pick < 0.85) cTmp.copy(cCool);
+          else cTmp.copy(cWarm);
+
+          const brightness = 0.35 + Math.random() * 0.65;
+          sfColors[i * 3] = this.sfBaseColors[i * 3] = cTmp.r * brightness;
+          sfColors[i * 3 + 1] = this.sfBaseColors[i * 3 + 1] = cTmp.g * brightness;
+          sfColors[i * 3 + 2] = this.sfBaseColors[i * 3 + 2] = cTmp.b * brightness;
+          this.sfPhases[i] = Math.random() * Math.PI * 2;
+        }
+
+        const sfGeo = new THREE.BufferGeometry();
+        sfGeo.setAttribute('position', new THREE.BufferAttribute(sfPositions, 3));
+        sfGeo.setAttribute('color', new THREE.BufferAttribute(sfColors, 3));
+        this.starfieldColorsAttr = sfGeo.attributes.color;
+
+        const sfMat = new THREE.PointsMaterial({
+          size: 0.72,
+          map: this.glowTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.85,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          sizeAttenuation: true,
+        });
+        this.starfield = new THREE.Points(sfGeo, sfMat);
+        this.scene.add(this.starfield);
+
+        // ---------------------------------------------------------------------
+        // 2. BINARY STARS + TILTED ORBITAL ACCRETION RINGS (6 draw calls total)
+        // ---------------------------------------------------------------------
+        const createOrbitalRing = (radius, colorHexA, colorHexB, tiltX, tiltZ) => {
+          const segs = 64;
+          const pos = new Float32Array(segs * 3);
+          const col = new Float32Array(segs * 3);
+          const cA = new THREE.Color(colorHexA);
+          const cB = new THREE.Color(colorHexB);
+          const cMix = new THREE.Color();
+
+          for (let i = 0; i < segs; i++) {
+            const a = (i / segs) * Math.PI * 2;
+            pos[i * 3] = Math.cos(a) * radius;
+            pos[i * 3 + 1] = 0;
+            pos[i * 3 + 2] = Math.sin(a) * radius;
+            cMix.copy(cA).lerp(cB, 0.5 + 0.5 * Math.sin(a * 2));
+            col[i * 3] = cMix.r;
+            col[i * 3 + 1] = cMix.g;
+            col[i * 3 + 2] = cMix.b;
+          }
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+          const mat = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.42,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+          });
+          const ring = new THREE.LineLoop(geo, mat);
+          ring.rotation.x = tiltX;
+          ring.rotation.z = tiltZ;
+          return { ring, mat };
+        };
+
+        const createStarSprites = (haloColorHex, ringColorA, ringColorB, tiltX, tiltZ) => {
+          const group = new THREE.Group();
+
+          const haloMat = new THREE.SpriteMaterial({
+            map: this.glowTexture,
+            color: new THREE.Color(haloColorHex),
+            transparent: true,
+            opacity: 0.92,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+          });
+          const halo = new THREE.Sprite(haloMat);
+          halo.scale.set(5.4, 5.4, 1);
+
+          const coreMat = new THREE.SpriteMaterial({
+            map: this.glowTexture,
+            color: new THREE.Color('#ffffff'),
+            transparent: true,
+            opacity: 1.0,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+          });
+          const core = new THREE.Sprite(coreMat);
+          core.scale.set(1.9, 1.9, 1);
+
+          const orbital = createOrbitalRing(2.15, ringColorA, ringColorB, tiltX, tiltZ);
+
+          group.add(halo);
+          group.add(core);
+          group.add(orbital.ring);
+          this.scene.add(group);
+          return { group, halo, core, ring: orbital.ring, ringMat: orbital.mat };
+        };
+
+        this.starA = createStarSprites('#ff2e55', '#f0d399', '#ff6b8b', 0.58, 0.34);
+        this.starB = createStarSprites('#2e8bff', '#f0d399', '#6ec6ff', -0.52, 0.42);
+
+        // ---------------------------------------------------------------------
+        // 3. CONVERGENCE LUMINOUS PULSE SPRITE (1 draw call)
+        // ---------------------------------------------------------------------
+        const pulseMat = new THREE.SpriteMaterial({
+          map: this.glowTexture,
+          color: new THREE.Color('#f6dca8'),
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        this.pulseSprite = new THREE.Sprite(pulseMat);
+        this.pulseSprite.scale.set(1, 1, 1);
+        this.scene.add(this.pulseSprite);
+
+        // ---------------------------------------------------------------------
+        // 4. DUAL-HELIX GRAVITATIONAL STARDUST BRIDGE (500 particles, 1 draw call)
+        // ---------------------------------------------------------------------
+        this.bridgeCount = 500;
+        const bPos = new Float32Array(this.bridgeCount * 3);
+        const bCol = new Float32Array(this.bridgeCount * 3);
+        this.bridgeMeta = [];
+
+        const colCrimson = new THREE.Color('#ff2e55');
+        const colGold = new THREE.Color('#f0d399');
+        const colSapphire = new THREE.Color('#2e8bff');
+        const cBridge = new THREE.Color();
+
+        for (let i = 0; i < this.bridgeCount; i++) {
+          const p = Math.random();
+          const strand = i % 2 === 0 ? 0 : Math.PI; // Dual-helix opposing strands
+          this.bridgeMeta.push({
+            progress: p,
+            speed: (0.072 + Math.random() * 0.082) * (i % 2 === 0 ? 1 : -1),
+            strand,
+            jitter: (Math.random() - 0.5) * 0.45,
+            radialOffset: 0.22 + Math.random() * 0.62,
+            swirlFreq: 1.7 + Math.random() * 1.4,
+          });
+
+          if (p < 0.5) {
+            cBridge.copy(colCrimson).lerp(colGold, p * 2);
+          } else {
+            cBridge.copy(colGold).lerp(colSapphire, (p - 0.5) * 2);
+          }
+          bCol[i * 3] = cBridge.r;
+          bCol[i * 3 + 1] = cBridge.g;
+          bCol[i * 3 + 2] = cBridge.b;
+        }
+
+        const bGeo = new THREE.BufferGeometry();
+        bGeo.setAttribute('position', new THREE.BufferAttribute(bPos, 3));
+        bGeo.setAttribute('color', new THREE.BufferAttribute(bCol, 3));
+        this.bridgePosAttr = bGeo.attributes.position;
+        this.bridgeColAttr = bGeo.attributes.color;
+
+        this.bridgeMat = new THREE.PointsMaterial({
+          size: 0.34,
+          map: this.glowTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.78,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          sizeAttenuation: true,
+        });
+        this.bridgePoints = new THREE.Points(bGeo, this.bridgeMat);
+        this.bridgePoints.frustumCulled = false;
+        this.scene.add(this.bridgePoints);
+
+        // ---------------------------------------------------------------------
+        // 5. 3D PARTICLE HUMPBACK WHALE (~800 particles, 1 draw call)
+        // ---------------------------------------------------------------------
+        this.whale = buildParticleWhaleData(this.glowTexture);
+        this.scene.add(this.whale.points);
+
+        // ---------------------------------------------------------------------
+        // 6. WHALE BIOLUMINESCENT STARLIGHT TRAIL (~140 particles, 1 draw call)
+        // ---------------------------------------------------------------------
+        this.trailCount = 140;
+        const tPos = new Float32Array(this.trailCount * 3);
+        const tCol = new Float32Array(this.trailCount * 3);
+        this.trailAges = new Float32Array(this.trailCount);
+        this.trailWriteIdx = 0;
+        this.trailSpawnAccum = 0;
+
+        for (let i = 0; i < this.trailCount; i++) {
+          this.trailAges[i] = 1.0; // start faded
+          tPos[i * 3] = 0;
+          tPos[i * 3 + 1] = -999;
+          tPos[i * 3 + 2] = 0;
+        }
+
+        const tGeo = new THREE.BufferGeometry();
+        tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3));
+        tGeo.setAttribute('color', new THREE.BufferAttribute(tCol, 3));
+        this.trailPosAttr = tGeo.attributes.position;
+        this.trailColAttr = tGeo.attributes.color;
+
+        const tMat = new THREE.PointsMaterial({
+          size: 0.34,
+          map: this.glowTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.78,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          sizeAttenuation: true,
+        });
+        this.trailPoints = new THREE.Points(tGeo, tMat);
+        this.trailPoints.frustumCulled = false;
+        this.scene.add(this.trailPoints);
+
+        // ---------------------------------------------------------------------
+        // 7. 3D "AYA" CONSTELLATION IN DEEP SPACE (2 draw calls: Points + Lines)
+        // Positioned gracefully behind the binary stars for Chapter III framing
+        // ---------------------------------------------------------------------
+        const ayaNodes = [
+          // Letter A (Left)
+          [-8.6, 1.4, -22.5],  // 0
+          [-7.5, 4.0, -22.2],  // 1
+          [-6.4, 6.8, -22.0],  // 2 Apex
+          [-5.3, 4.0, -22.2],  // 3
+          [-4.2, 1.4, -22.5],  // 4
+          // Letter Y (Center)
+          [-2.0, 6.8, -21.8],  // 5
+          [ 0.0, 4.1, -21.5],  // 6 Heart node
+          [ 2.0, 6.8, -21.8],  // 7
+          [ 0.0, 1.3, -22.0],  // 8 Base
+          // Letter A (Right)
+          [ 4.2, 1.4, -22.5],  // 9
+          [ 5.3, 4.0, -22.2],  // 10
+          [ 6.4, 6.8, -22.0],  // 11 Apex
+          [ 7.5, 4.0, -22.2],  // 12
+          [ 8.6, 1.4, -22.5],  // 13
+        ];
+
+        const ayaEdges = [
+          [0, 1], [1, 2], [2, 3], [3, 4], [1, 3],
+          [5, 6], [7, 6], [6, 8],
+          [9, 10], [10, 11], [11, 12], [12, 13], [10, 12],
+        ];
+
+        const ayaStarPos = new Float32Array(ayaNodes.length * 3);
+        const ayaStarCol = new Float32Array(ayaNodes.length * 3);
+        ayaNodes.forEach((n, idx) => {
+          ayaStarPos[idx * 3] = n[0];
+          ayaStarPos[idx * 3 + 1] = n[1];
+          ayaStarPos[idx * 3 + 2] = n[2];
+          // Warm celestial gold-white
+          ayaStarCol[idx * 3] = 1.0;
+          ayaStarCol[idx * 3 + 1] = 0.90;
+          ayaStarCol[idx * 3 + 2] = 0.72;
+        });
+
+        const ayaStarGeo = new THREE.BufferGeometry();
+        ayaStarGeo.setAttribute('position', new THREE.BufferAttribute(ayaStarPos, 3));
+        ayaStarGeo.setAttribute('color', new THREE.BufferAttribute(ayaStarCol, 3));
+        this.ayaStarMat = new THREE.PointsMaterial({
+          size: 1.15,
+          map: this.glowTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.55,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          sizeAttenuation: true,
+        });
+        this.ayaStars = new THREE.Points(ayaStarGeo, this.ayaStarMat);
+        this.scene.add(this.ayaStars);
+
+        const ayaLinePos = new Float32Array(ayaEdges.length * 2 * 3);
+        ayaEdges.forEach(([a, b], idx) => {
+          const pA = ayaNodes[a];
+          const pB = ayaNodes[b];
+          ayaLinePos[idx * 6 + 0] = pA[0];
+          ayaLinePos[idx * 6 + 1] = pA[1];
+          ayaLinePos[idx * 6 + 2] = pA[2];
+          ayaLinePos[idx * 6 + 3] = pB[0];
+          ayaLinePos[idx * 6 + 4] = pB[1];
+          ayaLinePos[idx * 6 + 5] = pB[2];
+        });
+        const ayaLineGeo = new THREE.BufferGeometry();
+        ayaLineGeo.setAttribute('position', new THREE.BufferAttribute(ayaLinePos, 3));
+        this.ayaLineMat = new THREE.LineBasicMaterial({
+          color: new THREE.Color('#f0d399'),
+          transparent: true,
+          opacity: 0.25,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        this.ayaLines = new THREE.LineSegments(ayaLineGeo, this.ayaLineMat);
+        this.scene.add(this.ayaLines);
+
+        // ---------------------------------------------------------------------
+        // 8. POOLED SHOOTING STARS / METEOR SHOWER (10 meteors, 1 draw call)
+        // ---------------------------------------------------------------------
+        this.meteorPoolSize = 10;
+        this.meteors = Array.from({ length: this.meteorPoolSize }, () => ({
+          active: false,
+          life: 0,
+          maxLife: 1.0,
+          pos: new THREE.Vector3(),
+          vel: new THREE.Vector3(),
+          tailLen: 3.4,
+        }));
+
+        const mPos = new Float32Array(this.meteorPoolSize * 2 * 3);
+        const mCol = new Float32Array(this.meteorPoolSize * 2 * 3);
+        const mGeo = new THREE.BufferGeometry();
+        mGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
+        mGeo.setAttribute('color', new THREE.BufferAttribute(mCol, 3));
+        this.meteorPosAttr = mGeo.attributes.position;
+        this.meteorColAttr = mGeo.attributes.color;
+
+        const mMat = new THREE.LineBasicMaterial({
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.95,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        this.meteorLines = new THREE.LineSegments(mGeo, mMat);
+        this.meteorLines.frustumCulled = false;
+        this.scene.add(this.meteorLines);
+
+        // ---------------------------------------------------------------------
+        // 9. 5 FLOATING GOLDEN MEMORY STARS (1 draw call)
+        // ---------------------------------------------------------------------
+        const memCount = this.memoryNotes.length;
+        const memPos = new Float32Array(memCount * 3);
+        const memCol = new Float32Array(memCount * 3);
+        for (let i = 0; i < memCount; i++) {
+          memCol[i * 3] = 1.0;
+          memCol[i * 3 + 1] = 0.87;
+          memCol[i * 3 + 2] = 0.62;
+        }
+        const memGeo = new THREE.BufferGeometry();
+        memGeo.setAttribute('position', new THREE.BufferAttribute(memPos, 3));
+        memGeo.setAttribute('color', new THREE.BufferAttribute(memCol, 3));
+        this.memoryPosAttr = memGeo.attributes.position;
+        this.memoryColAttr = memGeo.attributes.color;
+
+        const memMat = new THREE.PointsMaterial({
+          size: 2.3,
+          map: this.glowTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.96,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          sizeAttenuation: true,
+        });
+        this.memoryStarsPoints = new THREE.Points(memGeo, memMat);
+        this.memoryStarsPoints.frustumCulled = false;
+        this.scene.add(this.memoryStarsPoints);
+
+        // ---------------------------------------------------------------------
+        // 10. LAUNCHED DUA / WISH STARS CLOUD (up to 24 stars, 1 draw call)
+        // ---------------------------------------------------------------------
+        const wPos = new Float32Array(this.maxWishStars * 3);
+        const wCol = new Float32Array(this.maxWishStars * 3);
+        for (let i = 0; i < this.maxWishStars; i++) {
+          wPos[i * 3 + 1] = -999;
+        }
+        const wGeo = new THREE.BufferGeometry();
+        wGeo.setAttribute('position', new THREE.BufferAttribute(wPos, 3));
+        wGeo.setAttribute('color', new THREE.BufferAttribute(wCol, 3));
+        this.wishPosAttr = wGeo.attributes.position;
+        this.wishColAttr = wGeo.attributes.color;
+
+        const wMat = new THREE.PointsMaterial({
+          size: 1.45,
+          map: this.glowTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.95,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          sizeAttenuation: true,
+        });
+        this.wishStarsPoints = new THREE.Points(wGeo, wMat);
+        this.wishStarsPoints.frustumCulled = false;
+        this.scene.add(this.wishStarsPoints);
+      }
+
+      loadSavedDuas() {
+        try {
+          const raw = localStorage.getItem('aya_binary_duas_v1');
+          const parsed = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(parsed)) return [];
+          return parsed.slice(-this.maxWishStars).map((item, idx) => ({
+            text: String(item.text || 'Dua'),
+            orbitR: item.orbitR || 7.2 + (idx % 5) * 0.95,
+            angle: item.angle != null ? item.angle : idx * 1.15,
+            yOff: item.yOff != null ? item.yOff : ((idx % 2 === 0 ? 1 : -1) * (1.2 + (idx % 3) * 0.8)),
+            speed: 0.16 + (idx % 4) * 0.03,
+            launchProgress: 1.0,
+          }));
+        } catch (err) {
+          return [];
+        }
+      }
+
+      saveDuasToStorage() {
+        try {
+          const compact = this.wishStars.slice(-this.maxWishStars).map((w) => ({
+            text: w.text,
+            orbitR: w.orbitR,
+            angle: w.angle,
+            yOff: w.yOff,
+          }));
+          localStorage.setItem('aya_binary_duas_v1', JSON.stringify(compact));
+        } catch (err) {
+          // Safe ignore in restricted iFrames
+        }
+      }
+
+      updateDuaCountUI() {
+        if (!this.duaCountNote) return;
+        const n = this.wishStars.length;
+        this.duaCountNote.textContent =
+          n === 1 ? '1 Dua orbiting in this sky' : `${n} Duas orbiting in this sky`;
+      }
+
+      showToast(message, duration = 2800) {
+        if (!this.toastPill) return;
+        this.toastPill.textContent = message;
+        this.toastPill.classList.add('is-visible');
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => {
+          this.toastPill.classList.remove('is-visible');
+        }, duration);
+      }
+
+      buildMemoryMarkers() {
+        if (!this.memoryMarkersLayer) return;
+        this.memoryMarkersLayer.innerHTML = '';
+        this.memoryMarkerEls = this.memoryNotes.map((note, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'memory-star-marker';
+          btn.setAttribute('aria-label', `Read memory star: ${note.title}`);
+          btn.innerHTML = `<span class="memory-star-diamond" aria-hidden="true"></span><span class="memory-star-tag">${note.tag}</span>`;
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openMemoryNote(idx);
+          });
+          this.memoryMarkersLayer.appendChild(btn);
+          return btn;
+        });
+      }
+
+      openMemoryNote(idx) {
+        const note = this.memoryNotes[idx];
+        if (!note || !this.noteModal) return;
+        this.activeNoteIdx = idx;
+        note.read = true;
+        if (this.memoryMarkerEls && this.memoryMarkerEls[idx]) {
+          this.memoryMarkerEls[idx].classList.add('is-read');
+        }
+        if (this.noteEyebrow) this.noteEyebrow.textContent = note.eyebrow;
+        if (this.noteTitle) this.noteTitle.textContent = note.title;
+        if (this.noteBody) this.noteBody.textContent = note.body;
+        this.noteModal.classList.add('is-visible');
+
+        this.whalePulseProgress = 0.0;
+        this.spawnShootingStar();
+        this.piano.playMemoryChime();
+      }
+
+      launchWishStar(rawText) {
+        const text = (rawText || '').trim() || 'اللَّهُمَّ اجْمَعْنَا عَلَى خَيْرٍ';
+        if (this.wishStars.length >= this.maxWishStars) {
+          this.wishStars.shift();
+        }
+        const idx = this.wishStars.length;
+        this.wishStars.push({
+          text,
+          orbitR: 6.8 + Math.random() * 4.2,
+          angle: Math.random() * Math.PI * 2,
+          yOff: (Math.random() - 0.5) * 4.4,
+          speed: 0.15 + Math.random() * 0.1,
+          launchProgress: 0.0,
+        });
+        this.saveDuasToStorage();
+        this.updateDuaCountUI();
+        this.whalePulseProgress = 0.0;
+        this.spawnShootingStar();
+        this.piano.playWishLaunch();
+        this.showToast('✦ Your Dua star is now orbiting the sky');
+      }
+
+      setCinemaMode(enabled) {
+        this.cinemaMode = enabled;
+        if (this.cinemaBtn) {
+          this.cinemaBtn.classList.toggle('is-active', enabled);
+          this.cinemaBtn.setAttribute('aria-pressed', String(enabled));
+        }
+        if (this.cinemaLabel) {
+          this.cinemaLabel.textContent = enabled ? 'Stop' : 'Cinema';
+        }
+        if (enabled) {
+          this.cinemaTime = 0;
+          this.cinemaStage = -1;
+          if (!this.piano.isPlaying) {
+            const playing = this.piano.start();
+            if (this.audioPillWrap) this.audioPillWrap.classList.toggle('is-active', playing);
+            if (this.soundBtn) this.soundBtn.setAttribute('aria-pressed', String(playing));
+            if (this.soundLabel) this.soundLabel.textContent = playing ? 'On' : 'Piano';
+          }
+          this.showToast('Cinema Mode · Sit back & watch the journey');
+        } else {
+          this.isHolding = false;
+          if (this.holdBtn) this.holdBtn.classList.remove('is-holding');
+        }
+      }
+
+      captureWallpaper() {
+        try {
+          // Render a fresh frame synchronously so WebGL buffer is populated without preserveDrawingBuffer
+          this.renderer.render(this.scene, this.camera);
+
+          const w = this.canvas.width;
+          const h = this.canvas.height;
+          const out = document.createElement('canvas');
+          out.width = w;
+          out.height = h;
+          const ctx = out.getContext('2d');
+          ctx.drawImage(this.canvas, 0, 0, w, h);
+
+          // Soft dark vignette at top & bottom for crisp calligraphy legibility
+          const gradTop = ctx.createLinearGradient(0, 0, 0, h * 0.28);
+          gradTop.addColorStop(0, 'rgba(3, 3, 8, 0.72)');
+          gradTop.addColorStop(1, 'rgba(3, 3, 8, 0)');
+          ctx.fillStyle = gradTop;
+          ctx.fillRect(0, 0, w, h * 0.28);
+
+          const gradBot = ctx.createLinearGradient(0, h * 0.78, 0, h);
+          gradBot.addColorStop(0, 'rgba(3, 3, 8, 0)');
+          gradBot.addColorStop(1, 'rgba(3, 3, 8, 0.78)');
+          ctx.fillStyle = gradBot;
+          ctx.fillRect(0, h * 0.78, w, h * 0.22);
+
+          // Draw active Arabic verse & Dedication watermark
+          const ch = this.chapters[this.activeChapter] || this.chapters[0];
+          const fontBase = Math.max(18, Math.round(Math.min(w, h) * 0.036));
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'rgba(250, 247, 252, 0.96)';
+          ctx.font = `700 ${fontBase}px "Amiri", Georgia, serif`;
+          ctx.fillText(ch.arabic, w * 0.5, h * 0.11, w * 0.88);
+
+          ctx.fillStyle = 'rgba(240, 211, 153, 0.88)';
+          ctx.font = `500 ${Math.round(fontBase * 0.52)}px "Cinzel", Georgia, serif`;
+          ctx.fillText('FOR AYA  ·  آيَة', w * 0.5, h * 0.91);
+
+          const link = document.createElement('a');
+          link.download = `binary-stars-aya-chapter-${this.activeChapter + 1}.png`;
+          link.href = out.toDataURL('image/png');
+          link.click();
+
+          this.piano.playHarmonicTap();
+          this.showToast('Wallpaper saved for your phone ✦');
+        } catch (err) {
+          this.showToast('Could not save wallpaper on this browser');
+        }
+      }
+
+      /**
+       * Spawns a pooled shooting star streaking cleanly across deep space.
+       */
+      spawnShootingStar() {
+        const slot = this.meteors.find((m) => !m.active) || this.meteors[0];
+        slot.active = true;
+        slot.life = 0;
+        slot.maxLife = 0.95 + Math.random() * 0.55;
+        slot.tailLen = 2.8 + Math.random() * 2.2;
+
+        const side = Math.random() > 0.5 ? 1 : -1;
+        slot.pos.set(
+          side * (16 + Math.random() * 14),
+          8 + Math.random() * 14,
+          -14 - Math.random() * 18
+        );
+        slot.vel.set(
+          -side * (24 + Math.random() * 12),
+          -(12 + Math.random() * 8),
+          (Math.random() - 0.5) * 6
+        );
+      }
+
+      /**
+       * Triggers bioluminescent pulse along the whale + shooting star + piano note
+       */
+      triggerSkyTapEffect() {
+        this.whalePulseProgress = 0.0;
+        this.spawnShootingStar();
+        this.piano.playHarmonicTap();
+        if (Math.random() < 0.35) {
+          this.piano.playWhaleSong();
+        }
+      }
+
+      /**
+       * Computes whale position along a graceful figure-eight path weaving
+       * around and between the two binary stars.
+       */
+      sampleWhalePath(t, conv, outVec) {
+        const orbitAngle = t * 0.34;
+        // Scale figure-eight gracefully inward into a spiral as stars converge
+        const rx = THREE.MathUtils.lerp(8.8, 4.9, conv);
+        const rz = THREE.MathUtils.lerp(4.4, 4.6, conv);
+        const ry = THREE.MathUtils.lerp(1.65, 2.0, conv);
+
+        // Blend from Lissajous figure-eight (conv=0) to smooth halo spiral (conv=1)
+        const figX = Math.sin(orbitAngle) * rx;
+        const figZ = Math.sin(orbitAngle * 2.0) * rz * 0.68;
+        const spirX = Math.cos(orbitAngle * 1.4) * rx;
+        const spirZ = Math.sin(orbitAngle * 1.4) * rz;
+
+        const x = THREE.MathUtils.lerp(figX, spirX, conv);
+        const z = THREE.MathUtils.lerp(figZ, spirZ, conv);
+        const y = Math.sin(orbitAngle * 1.5 + 0.6) * ry;
+
+        outVec.set(x, y, z);
+        return outVec;
+      }
+
+      /**
+       * Custom Lightweight Spherical Camera Orbit Controller
+       * Supports mouse drag, single-finger touch drag, and wheel zoom.
+       */
+      bindCameraControls() {
+        const onDown = (x, y) => {
+          this.camState.isDragging = true;
+          this.camState.downX = x;
+          this.camState.downY = y;
+          this.camState.downTime = performance.now();
+          this.camState.lastX = x;
+          this.camState.lastY = y;
+          this.camState.movedDist = 0;
+        };
+
+        const onMove = (x, y) => {
+          if (!this.camState.isDragging) return;
+          const dx = x - this.camState.lastX;
+          const dy = y - this.camState.lastY;
+          this.camState.lastX = x;
+          this.camState.lastY = y;
+          this.camState.movedDist += Math.abs(dx) + Math.abs(dy);
+
+          if (this.cinemaMode && this.camState.movedDist > 18) {
+            this.setCinemaMode(false);
+          }
+
+          if (this.whaleCam) return; // Keep Whale Cam smoothly locked while active
+
+          this.camState.targetTheta -= dx * 0.0065;
+          this.camState.targetPhi = THREE.MathUtils.clamp(
+            this.camState.targetPhi - dy * 0.0055,
+            0.35,
+            Math.PI - 0.35
+          );
+        };
+
+        const onUp = () => {
+          if (!this.camState.isDragging) return;
+          const elapsed = performance.now() - this.camState.downTime;
+          const wasTap = this.camState.movedDist < 10 && elapsed < 320;
+          this.camState.isDragging = false;
+          if (wasTap) {
+            this.triggerSkyTapEffect();
+          }
+        };
+
+        // Mouse drag & wheel zoom
+        this.canvas.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
+        window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onUp);
+
+        this.canvas.addEventListener(
+          'wheel',
+          (e) => {
+            if (this.whaleCam) return;
+            this.camState.targetRadius = THREE.MathUtils.clamp(
+              this.camState.targetRadius + e.deltaY * 0.014,
+              12,
+              42
+            );
+          },
+          { passive: true }
+        );
+
+        // Single-finger touch drag & tap
+        this.canvas.addEventListener(
+          'touchstart',
+          (e) => {
+            if (e.touches.length === 1) {
+              onDown(e.touches[0].clientX, e.touches[0].clientY);
+            }
+          },
+          { passive: true }
+        );
+
+        this.canvas.addEventListener(
+          'touchmove',
+          (e) => {
+            if (e.touches.length === 1) {
+              onMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+          },
+          { passive: true }
+        );
+
+        this.canvas.addEventListener('touchend', onUp, { passive: true });
+        this.canvas.addEventListener('touchcancel', onUp, { passive: true });
+      }
+
+      bindUIControls() {
+        // Sound toggle & mini volume slider
+        if (this.soundBtn) {
+          this.soundBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const playing = this.piano.toggle();
+            if (this.audioPillWrap) this.audioPillWrap.classList.toggle('is-active', playing);
+            this.soundBtn.setAttribute('aria-pressed', String(playing));
+            if (this.soundLabel) {
+              this.soundLabel.textContent = playing ? 'On' : 'Piano';
+            }
+          });
+        }
+
+        if (this.volSlider) {
+          this.volSlider.addEventListener('input', (e) => {
+            e.stopPropagation();
+            this.piano.setVolume(parseFloat(e.target.value));
+          });
+          this.volSlider.addEventListener('pointerdown', (e) => e.stopPropagation());
+        }
+
+        // Hide/Show Verse Card toggle
+        if (this.verseToggleBtn && this.verseCard) {
+          this.verseToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.verseVisible = !this.verseVisible;
+            this.verseCard.classList.toggle('is-collapsed', !this.verseVisible);
+            this.verseToggleBtn.classList.toggle('is-active', this.verseVisible);
+            this.verseToggleBtn.setAttribute('aria-pressed', String(this.verseVisible));
+            if (this.verseToggleLabel) {
+              this.verseToggleLabel.textContent = this.verseVisible ? 'Verse' : 'Show';
+            }
+          });
+        }
+
+        // Cinema Auto-Journey Toggle
+        if (this.cinemaBtn) {
+          this.cinemaBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.setCinemaMode(!this.cinemaMode);
+          });
+        }
+
+        // Whale Cam Toggle
+        if (this.whaleCamBtn) {
+          this.whaleCamBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.cinemaMode) this.setCinemaMode(false);
+            this.whaleCam = !this.whaleCam;
+            this.whaleCamBtn.classList.toggle('is-active', this.whaleCam);
+            this.whaleCamBtn.setAttribute('aria-pressed', String(this.whaleCam));
+            if (this.whaleCamLabel) {
+              this.whaleCamLabel.textContent = this.whaleCam ? 'Free Orbit' : 'Whale Cam';
+            }
+            if (this.whaleCam) {
+              this.whalePulseProgress = 0.0;
+              this.piano.playWhaleSong();
+            } else {
+              this.piano.playHarmonicTap();
+            }
+          });
+        }
+
+        // 4 Celestial Chapter Pills
+        this.chapterPills.forEach((pill) => {
+          pill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.cinemaMode) this.setCinemaMode(false);
+            const idx = parseInt(pill.dataset.chapter, 10);
+            this.selectChapter(idx);
+          });
+        });
+
+        // Memory Note Modal Controls
+        if (this.noteCloseBtn && this.noteModal) {
+          this.noteCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.noteModal.classList.remove('is-visible');
+          });
+        }
+        if (this.noteNextBtn) {
+          this.noteNextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openMemoryNote((this.activeNoteIdx + 1) % this.memoryNotes.length);
+          });
+        }
+
+        // Launch a Dua Modal Controls
+        if (this.duaOpenBtn && this.duaModal) {
+          this.duaOpenBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.duaModal.classList.add('is-visible');
+            if (this.duaInput) setTimeout(() => this.duaInput.focus(), 120);
+          });
+        }
+        if (this.duaCloseBtn && this.duaModal) {
+          this.duaCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.duaModal.classList.remove('is-visible');
+          });
+        }
+        this.duaChips.forEach((chip) => {
+          chip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.duaInput) this.duaInput.value = chip.dataset.dua || '';
+          });
+        });
+        if (this.duaLaunchBtn && this.duaModal) {
+          this.duaLaunchBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const val = this.duaInput ? this.duaInput.value : '';
+            this.launchWishStar(val);
+            if (this.duaInput) this.duaInput.value = '';
+            this.duaModal.classList.remove('is-visible');
+          });
+        }
+        if (this.duaInput) {
+          this.duaInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              this.launchWishStar(this.duaInput.value);
+              this.duaInput.value = '';
+              if (this.duaModal) this.duaModal.classList.remove('is-visible');
+            }
+          });
+          this.duaInput.addEventListener('pointerdown', (e) => e.stopPropagation());
+        }
+
+        // Save Wallpaper Button
+        if (this.saveWallpaperBtn) {
+          this.saveWallpaperBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.captureWallpaper();
+          });
+        }
+
+        // Hold to close the distance
+        const startHold = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          this.isHolding = true;
+          this.holdBtn.classList.add('is-holding');
+          this.piano.playConvergenceSwell();
+        };
+
+        const endHold = (e) => {
+          if (e) e.stopPropagation();
+          this.isHolding = false;
+          this.holdBtn.classList.remove('is-holding');
+          if (!this.keepClose) {
+            this.piano.resetSwellGate();
+          }
+        };
+
+        if (this.holdBtn) {
+          this.holdBtn.addEventListener('pointerdown', startHold);
+          this.holdBtn.addEventListener('pointerup', endHold);
+          this.holdBtn.addEventListener('pointerleave', endHold);
+          this.holdBtn.addEventListener('pointercancel', endHold);
+          this.holdBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        // Keep Them Close toggle inside Final Vow Seal
+        if (this.keepCloseBtn) {
+          this.keepCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.keepClose = !this.keepClose;
+            this.keepCloseBtn.classList.toggle('is-locked', this.keepClose);
+            this.keepCloseBtn.setAttribute('aria-pressed', String(this.keepClose));
+            if (this.keepCloseLabel) {
+              this.keepCloseLabel.textContent = this.keepClose ? 'Kept Close' : 'Keep Them Close';
+            }
+            if (this.keepClose) {
+              this.piano.playConvergenceSwell();
+            } else {
+              this.piano.resetSwellGate();
+            }
+          });
+        }
+
+        // Return to Space button (dismisses Final Vow Seal cleanly)
+        if (this.returnSpaceBtn && this.vowOverlay) {
+          this.returnSpaceBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.vowOverlay.classList.remove('is-visible');
+            this.isHolding = false;
+            this.holdBtn.classList.remove('is-holding');
+          });
+        }
+      }
+
+      selectChapter(idx) {
+        const ch = this.chapters[idx];
+        if (!ch) return;
+        this.activeChapter = idx;
+
+        this.chapterPills.forEach((p) => {
+          p.classList.toggle('is-active', parseInt(p.dataset.chapter, 10) === idx);
+        });
+
+        if (this.verseEyebrow) this.verseEyebrow.textContent = ch.eyebrow;
+        if (this.verseArabic) this.verseArabic.textContent = ch.arabic;
+        if (this.verseArabicSecondary) this.verseArabicSecondary.textContent = ch.secondary;
+        if (this.verseCaption) this.verseCaption.textContent = ch.caption;
+        if (this.verseRef) this.verseRef.textContent = ch.ref;
+
+        // If verse card was hidden, gently show it when choosing a chapter
+        if (!this.verseVisible && this.verseCard) {
+          this.verseVisible = true;
+          this.verseCard.classList.remove('is-collapsed');
+          this.verseToggleBtn.classList.add('is-active');
+          this.verseToggleBtn.setAttribute('aria-pressed', 'true');
+          if (this.verseToggleLabel) this.verseToggleLabel.textContent = 'Verse';
+        }
+
+        // Exit Whale Cam smoothly to frame the chapter's curated 3D vantage point
+        if (this.whaleCam) {
+          this.whaleCam = false;
+          this.whaleCamBtn.classList.remove('is-active');
+          this.whaleCamBtn.setAttribute('aria-pressed', 'false');
+          if (this.whaleCamLabel) this.whaleCamLabel.textContent = 'Whale Cam';
+        }
+
+        this.camState.targetTheta = ch.cam.theta;
+        this.camState.targetPhi = ch.cam.phi;
+        this.camState.targetRadius = ch.cam.radius;
+
+        if (idx === 3) {
+          this.spawnShootingStar();
+        }
+        this.piano.playChapterChime(idx);
+      }
+
+      bindLifecycle() {
+        window.addEventListener(
+          'resize',
+          () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            this.camera.aspect = w / h;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+            this.renderer.setSize(w, h);
+          },
+          { passive: true }
+        );
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            this.isPaused = true;
+            if (this.rafId !== null) {
+              cancelAnimationFrame(this.rafId);
+              this.rafId = null;
+            }
+          } else {
+            this.isPaused = false;
+            this.lastFrameTime = performance.now();
+            this.startLoop();
+          }
+        });
+      }
+
+      startLoop() {
+        if (this.rafId !== null) cancelAnimationFrame(this.rafId);
+        this.lastFrameTime = performance.now();
+        this.rafId = requestAnimationFrame(this.animate);
+      }
+
+      updateConvergenceUI() {
+        const pct = THREE.MathUtils.clamp(this.convergence, 0, 1);
+        if (this.holdProgressFill) {
+          this.holdProgressFill.style.transform = `scaleX(${pct.toFixed(4)})`;
+        }
+        if (this.holdRingBar) {
+          this.holdRingBar.style.strokeDashoffset = (44 * (1 - pct)).toFixed(2);
+        }
+        if (this.holdBtnText) {
+          if (this.keepClose) {
+            this.holdBtnText.textContent = 'Held Close Together';
+          } else if (pct >= 0.96) {
+            this.holdBtnText.textContent = 'Distance Closed';
+          } else if (this.isHolding) {
+            this.holdBtnText.textContent = 'Drawing closer…';
+          } else {
+            this.holdBtnText.textContent = 'Hold to close the distance';
+          }
+        }
+      }
+
+      animate(now) {
+        if (this.isPaused) return;
+        this.rafId = requestAnimationFrame(this.animate);
+
+        const dt = Math.min(0.05, Math.max(0.001, (now - this.lastFrameTime) / 1000));
+        this.lastFrameTime = now;
+        this.clockTime += dt;
+        const t = this.clockTime;
+
+        // 0A. Continuous Background & Nebula Chromatic Shift:
+        // Smoothly cycles: Obsidian -> Crimson & Black -> Obsidian -> Sapphire & Black,
+        // and blends both Crimson + Sapphire together when the two giant orbs converge.
+        const cycleWave = Math.sin(t * 0.26); // Full smooth cycle ~24 seconds
+        const redWave = Math.max(0, cycleWave);
+        const blueWave = Math.max(0, -cycleWave);
+
+        this.bgLiveColor.copy(this.bgObsidian);
+        if (redWave > 0) {
+          this.bgLiveColor.lerp(this.bgCrimsonBlack, Math.pow(redWave, 0.85) * 0.92);
+        } else if (blueWave > 0) {
+          this.bgLiveColor.lerp(this.bgSapphireBlack, Math.pow(blueWave, 0.85) * 0.92);
+        }
+        if (this.convergence > 0.01) {
+          // When the two giant orbs draw together, fuse Crimson + Sapphire into a deep royal-crimson/sapphire black mix
+          this.bgLiveColor.lerp(this.bgUnityMix, this.convergence * 0.88);
+        }
+        this.scene.background.copy(this.bgLiveColor);
+
+        // Sync deep-space nebula clouds with the active Crimson/Black <-> Sapphire/Black cycle & convergence mix
+        if (this.nebulaColAttr) {
+          const nCol = this.nebulaColAttr.array;
+          const rBoost = 0.14 + redWave * 0.56 + this.convergence * 0.48;
+          const bBoost = 0.14 + blueWave * 0.58 + this.convergence * 0.48;
+
+          for (let i = 0; i < 6; i++) {
+            const idx = i * 3;
+            if (i % 2 === 0) {
+              // Crimson-dominant nebula clouds that absorb sapphire as orbs unite
+              nCol[idx] = Math.min(1, rBoost * 1.05);
+              nCol[idx + 1] = 0.05 + this.convergence * 0.14;
+              nCol[idx + 2] = 0.12 + blueWave * 0.36 + this.convergence * 0.52;
+            } else {
+              // Sapphire-dominant nebula clouds that absorb crimson as orbs unite
+              nCol[idx] = 0.10 + redWave * 0.36 + this.convergence * 0.52;
+              nCol[idx + 1] = 0.12 + bBoost * 0.34;
+              nCol[idx + 2] = Math.min(1, bBoost * 1.08);
+            }
+          }
+          this.nebulaColAttr.needsUpdate = true;
+        }
+
+        // Throttled CSS vignette & UI border tint sync (~10fps so mobile stays 60fps)
+        if (now - this.lastVignetteSync > 100) {
+          this.lastVignetteSync = now;
+          const rInt = Math.round(45 + redWave * 210 + this.convergence * 165);
+          const gInt = Math.round(28 + blueWave * 95 + this.convergence * 55);
+          const bInt = Math.round(55 + blueWave * 200 + this.convergence * 185);
+          const glowAlpha = (0.09 + (redWave + blueWave) * 0.07 + this.convergence * 0.12).toFixed(3);
+          document.documentElement.style.setProperty(
+            '--ambient-glow',
+            `rgba(${Math.min(255, rInt)}, ${Math.min(255, gInt)}, ${Math.min(255, bInt)}, ${glowAlpha})`
+          );
+        }
+
+        // 0. Auto-Journey Cinema Mode Choreography
+        if (this.cinemaMode) {
+          this.cinemaTime += dt;
+          const ct = this.cinemaTime;
+          if (ct < 7.5 && this.cinemaStage !== 0) {
+            this.cinemaStage = 0;
+            this.selectChapter(0);
+          } else if (ct >= 7.5 && ct < 15.0 && this.cinemaStage !== 1) {
+            this.cinemaStage = 1;
+            this.selectChapter(1);
+          } else if (ct >= 15.0 && ct < 22.5 && this.cinemaStage !== 2) {
+            this.cinemaStage = 2;
+            this.selectChapter(2);
+          } else if (ct >= 22.5 && ct < 30.0 && this.cinemaStage !== 3) {
+            this.cinemaStage = 3;
+            this.selectChapter(3);
+          } else if (ct >= 30.0 && ct < 37.5 && this.cinemaStage !== 4) {
+            this.cinemaStage = 4;
+            this.whaleCam = true;
+            if (this.whaleCamBtn) this.whaleCamBtn.classList.add('is-active');
+            if (this.whaleCamLabel) this.whaleCamLabel.textContent = 'Free Orbit';
+            this.whalePulseProgress = 0.0;
+            this.piano.playWhaleSong();
+          } else if (ct >= 37.5 && this.cinemaStage !== 5) {
+            this.cinemaStage = 5;
+            this.whaleCam = false;
+            if (this.whaleCamBtn) this.whaleCamBtn.classList.remove('is-active');
+            if (this.whaleCamLabel) this.whaleCamLabel.textContent = 'Whale Cam';
+            this.isHolding = true;
+            this.piano.playConvergenceSwell();
+          } else if (ct >= 44.0) {
+            this.setCinemaMode(false);
+          }
+        }
+
+        // 1. Update Convergence Progress (Hold or Kept Close)
+        const prevConv = this.convergence;
+        if (this.isHolding || this.keepClose) {
+          this.convergence = Math.min(1, this.convergence + dt * 0.42);
+        } else {
+          this.convergence = Math.max(0, this.convergence - dt * 0.34);
+        }
+
+        // Trigger luminous pulse & Final Vow Seal when reaching 100% convergence
+        if (prevConv < 0.96 && this.convergence >= 0.96) {
+          this.pulseStrength = 1.0;
+          this.whalePulseProgress = 0.0;
+          this.spawnShootingStar();
+          if (!this.vowShown && this.vowOverlay) {
+            this.vowShown = true;
+            this.vowOverlay.classList.add('is-visible');
+          }
+        } else if (this.convergence < 0.25 && !this.keepClose && this.vowShown) {
+          this.vowShown = false;
+        }
+
+        this.updateConvergenceUI();
+
+        // 2. Binary Stars Orbit & Tilted Accretion Rings
+        const orbitRadius = THREE.MathUtils.lerp(5.8, 1.35, this.convergence);
+        const orbitSpeed = THREE.MathUtils.lerp(0.28, 0.72, this.convergence);
+        const starAngle = t * orbitSpeed;
+
+        this.starAPos.set(
+          Math.cos(starAngle) * orbitRadius,
+          Math.sin(starAngle * 1.2) * 0.55 * (1 - this.convergence * 0.6),
+          Math.sin(starAngle) * orbitRadius
+        );
+        this.starBPos.copy(this.starAPos).negate();
+
+        this.starA.group.position.copy(this.starAPos);
+        this.starB.group.position.copy(this.starBPos);
+
+        // Rotate orbital accretion rings & brighten during Chapter II (Her Choice)
+        this.starA.ring.rotation.y = t * 0.45;
+        this.starB.ring.rotation.y = -t * 0.42;
+        const ringBoost = this.activeChapter === 1 ? 0.82 : 0.42 + this.convergence * 0.35;
+        this.starA.ringMat.opacity += (ringBoost - this.starA.ringMat.opacity) * 0.08;
+        this.starB.ringMat.opacity += (ringBoost - this.starB.ringMat.opacity) * 0.08;
+
+        const starBreath = 1 + Math.sin(t * 2.4) * 0.06 + this.convergence * 0.26;
+        this.starA.halo.scale.setScalar(5.4 * starBreath);
+        this.starB.halo.scale.setScalar(5.4 * starBreath);
+        this.starA.core.scale.setScalar(1.9 * (1 + this.convergence * 0.2));
+        this.starB.core.scale.setScalar(1.9 * (1 + this.convergence * 0.2));
+
+        // 3. Convergence Luminous Pulse Sprite
+        if (this.pulseStrength > 0.005) {
+          this.pulseStrength *= Math.pow(0.24, dt);
+          const pScale = 3.5 + (1 - this.pulseStrength) * 16.5;
+          this.pulseSprite.scale.set(pScale, pScale, 1);
+          this.pulseSprite.material.opacity = this.pulseStrength * 0.82;
+        } else {
+          this.pulseSprite.material.opacity = 0;
+        }
+
+        // 4. Update Dual-Helix Gravitational Stardust Bridge (500 particles)
+        const bPosArr = this.bridgePosAttr.array;
+        const bColArr = this.bridgeColAttr.array;
+        const tight = THREE.MathUtils.lerp(1.0, 0.32, this.convergence);
+        const arcLift = THREE.MathUtils.lerp(1.75, 0.38, this.convergence);
+        this.bridgeMat.opacity = THREE.MathUtils.lerp(0.76, 1.0, this.convergence);
+        this.bridgeMat.size = THREE.MathUtils.lerp(0.32, 0.42, this.convergence);
+
+        for (let i = 0; i < this.bridgeCount; i++) {
+          const m = this.bridgeMeta[i];
+          m.progress += m.speed * (1 + this.convergence * 0.85) * dt;
+          if (m.progress > 1) m.progress -= 1;
+          if (m.progress < 0) m.progress += 1;
+
+          const p = m.progress;
+          const arch = Math.sin(p * Math.PI);
+
+          let bx = this.starAPos.x + (this.starBPos.x - this.starAPos.x) * p;
+          let by = this.starAPos.y + (this.starBPos.y - this.starAPos.y) * p;
+          let bz = this.starAPos.z + (this.starBPos.z - this.starAPos.z) * p;
+
+          // Dual-helix ribbon swirl between the two stars
+          const helixAngle = m.strand + p * Math.PI * 4.0 + t * m.swirlFreq;
+          const spread = (m.radialOffset + m.jitter * 0.3) * arch * tight;
+          bx += Math.cos(helixAngle) * spread;
+          by += Math.sin(helixAngle) * spread + Math.sin(p * Math.PI * 2) * arcLift * 0.38;
+          bz += Math.sin(helixAngle * 0.85) * spread;
+
+          bPosArr[i * 3] = bx;
+          bPosArr[i * 3 + 1] = by;
+          bPosArr[i * 3 + 2] = bz;
+
+          // Smooth color transition: Crimson -> Gold -> Sapphire
+          if (p < 0.5) {
+            const k = p * 2;
+            bColArr[i * 3] = 1.0 + (0.94 - 1.0) * k;
+            bColArr[i * 3 + 1] = 0.18 + (0.83 - 0.18) * k;
+            bColArr[i * 3 + 2] = 0.33 + (0.60 - 0.33) * k;
+          } else {
+            const k = (p - 0.5) * 2;
+            bColArr[i * 3] = 0.94 + (0.18 - 0.94) * k;
+            bColArr[i * 3 + 1] = 0.83 + (0.55 - 0.83) * k;
+            bColArr[i * 3 + 2] = 0.60 + (1.0 - 0.60) * k;
+          }
+        }
+        this.bridgePosAttr.needsUpdate = true;
+        this.bridgeColAttr.needsUpdate = true;
+
+        // 5. Animate 3D Particle Humpback Whale + Bioluminescent Energy Wave
+        this.sampleWhalePath(t, this.convergence, this.whalePos);
+        this.sampleWhalePath(t + 0.08, this.convergence, this.whaleNextPos);
+
+        this.whaleForward.subVectors(this.whaleNextPos, this.whalePos).normalize();
+        this.whaleRight.crossVectors(this.worldUp, this.whaleForward).normalize();
+        this.whaleUp.crossVectors(this.whaleForward, this.whaleRight).normalize();
+
+        this.rotMatrix.makeBasis(this.whaleRight, this.whaleUp, this.whaleForward);
+        this.whale.points.position.copy(this.whalePos);
+        this.whale.points.quaternion.setFromRotationMatrix(this.rotMatrix);
+
+        this.whale.material.size = THREE.MathUtils.lerp(0.32, 0.40, this.convergence);
+        this.whale.material.opacity = THREE.MathUtils.lerp(0.9, 1.0, this.convergence);
+
+        const base = this.whale.baseArray;
+        const live = this.whale.liveArray;
+        const baseCol = this.whale.baseColorArray;
+        const liveCol = this.whale.liveColorArray;
+        const normZ = this.whale.normZArray;
+        const flags = this.whale.partFlags;
+        const swimPhase = t * 3.1;
+
+        const pulseActive = this.whalePulseProgress <= 1.35;
+        if (pulseActive) {
+          this.whalePulseProgress += dt * 1.15;
+        }
+
+        for (let i = 0; i < this.whale.count; i++) {
+          const idx = i * 3;
+          const bx = base[idx];
+          const by = base[idx + 1];
+          const bz = base[idx + 2];
+
+          const bodyDist = normZ[i];
+          const waveAmp = 0.04 + Math.pow(bodyDist, 1.7) * 0.42;
+          const wave = Math.sin(swimPhase - bodyDist * 3.8) * waveAmp;
+          const finGlide = flags[i] === 1 ? Math.sin(swimPhase - 0.9) * Math.abs(bx) * 0.08 : 0;
+
+          live[idx] = bx;
+          live[idx + 1] = by + wave + finGlide;
+          live[idx + 2] = bz;
+
+          if (pulseActive) {
+            const distFromWave = Math.abs(bodyDist - this.whalePulseProgress);
+            const glow = Math.max(0, 1 - distFromWave * 4.5);
+            // Blend golden-cyan bioluminescent energy wave
+            liveCol[idx] = Math.min(1, baseCol[idx] + glow * 0.95);
+            liveCol[idx + 1] = Math.min(1, baseCol[idx + 1] + glow * 0.85);
+            liveCol[idx + 2] = Math.min(1, baseCol[idx + 2] + glow * 0.55);
+          } else {
+            liveCol[idx] = baseCol[idx];
+            liveCol[idx + 1] = baseCol[idx + 1];
+            liveCol[idx + 2] = baseCol[idx + 2];
+          }
+        }
+        this.whale.geometry.attributes.position.needsUpdate = true;
+        this.whale.geometry.attributes.color.needsUpdate = true;
+
+        // 6. Camera Controller: Smooth Dual Mode (Free Orbit OR Whale Cam)
+        if (this.whaleCam) {
+          // Fly smoothly alongside & slightly behind/above the swimming whale
+          this.desiredCamPos
+            .copy(this.whalePos)
+            .addScaledVector(this.whaleForward, -5.6)
+            .addScaledVector(this.whaleRight, 3.2)
+            .addScaledVector(this.worldUp, 2.2);
+          this.desiredLookAt.copy(this.whalePos).addScaledVector(this.whaleForward, 1.8);
+
+          this.camera.position.lerp(this.desiredCamPos, Math.min(1, dt * 3.2));
+          this.currentLookAt.lerp(this.desiredLookAt, Math.min(1, dt * 4.0));
+          this.camera.lookAt(this.currentLookAt);
+        } else {
+          if (!this.camState.isDragging && this.activeChapter !== 2) {
+            this.camState.targetTheta += dt * 0.05;
+          }
+          this.camState.theta += (this.camState.targetTheta - this.camState.theta) * 0.075;
+          this.camState.phi += (this.camState.targetPhi - this.camState.phi) * 0.075;
+          this.camState.radius += (this.camState.targetRadius - this.camState.radius) * 0.075;
+
+          const rCam = this.camState.radius;
+          const sinPhi = Math.sin(this.camState.phi);
+          this.desiredCamPos.set(
+            rCam * sinPhi * Math.sin(this.camState.theta),
+            rCam * Math.cos(this.camState.phi),
+            rCam * sinPhi * Math.cos(this.camState.theta)
+          );
+          this.desiredLookAt.set(0, this.activeChapter === 2 ? 1.5 : 0, 0);
+
+          this.camera.position.lerp(this.desiredCamPos, Math.min(1, dt * 6.0));
+          this.currentLookAt.lerp(this.desiredLookAt, Math.min(1, dt * 5.0));
+          this.camera.lookAt(this.currentLookAt);
+        }
+
+        // 7. 3D "AYA" Constellation Illumination (Brighter in Chapter III & Unity)
+        const ayaTargetStarOp =
+          this.activeChapter === 2 || this.convergence > 0.65
+            ? 0.96
+            : 0.42 + Math.sin(t * 1.4) * 0.08;
+        const ayaTargetLineOp =
+          this.activeChapter === 2 || this.convergence > 0.65 ? 0.68 : 0.16;
+        this.ayaStarMat.opacity += (ayaTargetStarOp - this.ayaStarMat.opacity) * 0.06;
+        this.ayaLineMat.opacity += (ayaTargetLineOp - this.ayaLineMat.opacity) * 0.06;
+
+        // 8. Pooled Shooting Stars & Chapter IV Meteor Shower
+        if (this.activeChapter === 3) {
+          this.meteorShowerTimer += dt;
+          if (this.meteorShowerTimer >= 0.48) {
+            this.meteorShowerTimer = 0;
+            this.spawnShootingStar();
+          }
+        }
+
+        const mPosArr = this.meteorPosAttr.array;
+        const mColArr = this.meteorColAttr.array;
+        for (let i = 0; i < this.meteorPoolSize; i++) {
+          const m = this.meteors[i];
+          const baseIdx = i * 6;
+          if (m.active) {
+            m.life += dt;
+            if (m.life >= m.maxLife) {
+              m.active = false;
+              mColArr[baseIdx] = mColArr[baseIdx + 1] = mColArr[baseIdx + 2] = 0;
+              mColArr[baseIdx + 3] = mColArr[baseIdx + 4] = mColArr[baseIdx + 5] = 0;
+              continue;
+            }
+            m.pos.addScaledVector(m.vel, dt);
+            const fade = Math.sin((m.life / m.maxLife) * Math.PI);
+            const invSpeed = 1 / (m.vel.length() || 1);
+
+            // Head of meteor
+            mPosArr[baseIdx + 0] = m.pos.x;
+            mPosArr[baseIdx + 1] = m.pos.y;
+            mPosArr[baseIdx + 2] = m.pos.z;
+            // Tail of meteor
+            mPosArr[baseIdx + 3] = m.pos.x - m.vel.x * invSpeed * m.tailLen;
+            mPosArr[baseIdx + 4] = m.pos.y - m.vel.y * invSpeed * m.tailLen;
+            mPosArr[baseIdx + 5] = m.pos.z - m.vel.z * invSpeed * m.tailLen;
+
+            mColArr[baseIdx + 0] = 1.0 * fade;
+            mColArr[baseIdx + 1] = 0.94 * fade;
+            mColArr[baseIdx + 2] = 0.80 * fade;
+            mColArr[baseIdx + 3] = 0.18 * fade;
+            mColArr[baseIdx + 4] = 0.55 * fade;
+            mColArr[baseIdx + 5] = 1.0 * fade;
+          }
+        }
+        this.meteorPosAttr.needsUpdate = true;
+        this.meteorColAttr.needsUpdate = true;
+
+        // 9. Update Whale Bioluminescent Starlight Trail
+        this.trailSpawnAccum += dt;
+        const tPosArr = this.trailPosAttr.array;
+        const tColArr = this.trailColAttr.array;
+
+        if (this.trailSpawnAccum >= 0.032) {
+          this.trailSpawnAccum = 0;
+          const wi = this.trailWriteIdx;
+          this.trailAges[wi] = 0;
+
+          // Spawn near whale's tail fluke in world space
+          tPosArr[wi * 3] = this.whalePos.x - this.whaleForward.x * 2.1 + (Math.random() - 0.5) * 0.6;
+          tPosArr[wi * 3 + 1] = this.whalePos.y - this.whaleForward.y * 2.1 + (Math.random() - 0.5) * 0.4;
+          tPosArr[wi * 3 + 2] = this.whalePos.z - this.whaleForward.z * 2.1 + (Math.random() - 0.5) * 0.6;
+
+          this.trailWriteIdx = (this.trailWriteIdx + 1) % this.trailCount;
+        }
+
+        for (let i = 0; i < this.trailCount; i++) {
+          if (this.trailAges[i] < 1.0) {
+            this.trailAges[i] = Math.min(1.0, this.trailAges[i] + dt * 0.28);
+            const fade = 1.0 - this.trailAges[i];
+            const lum = fade * fade * (0.75 + this.convergence * 0.35);
+
+            // Soft cyan-to-gold bioluminescence
+            tColArr[i * 3] = (0.55 + this.convergence * 0.4) * lum;
+            tColArr[i * 3 + 1] = 0.80 * lum;
+            tColArr[i * 3 + 2] = 1.0 * lum;
+          } else {
+            tColArr[i * 3] = 0;
+            tColArr[i * 3 + 1] = 0;
+            tColArr[i * 3 + 2] = 0;
+          }
+        }
+        this.trailPosAttr.needsUpdate = true;
+        this.trailColAttr.needsUpdate = true;
+
+        // 8. Subtle Distant Starfield Twinkle (lightweight partial update)
+        const sfCol = this.starfieldColorsAttr.array;
+        const sfBase = this.sfBaseColors;
+        const batchStart = (Math.floor(t * 60) * 90) % 900;
+        for (let k = 0; k < 90; k++) {
+          const i = (batchStart + k) % 900;
+          const tw = 0.72 + Math.sin(t * 1.9 + this.sfPhases[i]) * 0.28;
+          sfCol[i * 3] = sfBase[i * 3] * tw;
+          sfCol[i * 3 + 1] = sfBase[i * 3 + 1] * tw;
+          sfCol[i * 3 + 2] = sfBase[i * 3 + 2] * tw;
+        }
+        this.starfieldColorsAttr.needsUpdate = true;
+
+        // 10. Animate 5 Floating Memory Stars + Project Tap Markers to 2D Screen
+        const memPosArr = this.memoryPosAttr.array;
+        const memColArr = this.memoryColAttr.array;
+        const halfW = window.innerWidth * 0.5;
+        const halfH = window.innerHeight * 0.5;
+        const hideMarkers =
+          this.whaleCam ||
+          (this.vowOverlay && this.vowOverlay.classList.contains('is-visible')) ||
+          (this.noteModal && this.noteModal.classList.contains('is-visible')) ||
+          (this.duaModal && this.duaModal.classList.contains('is-visible'));
+
+        for (let i = 0; i < this.memoryNotes.length; i++) {
+          const note = this.memoryNotes[i];
+          const a = note.angle + t * note.speed;
+          const mx = Math.cos(a) * note.orbitR;
+          const my = note.yOff + Math.sin(t * 1.1 + i) * 0.65;
+          const mz = Math.sin(a) * note.orbitR;
+
+          memPosArr[i * 3] = mx;
+          memPosArr[i * 3 + 1] = my;
+          memPosArr[i * 3 + 2] = mz;
+
+          const glow = 0.78 + Math.sin(t * 2.6 + i * 1.3) * 0.22;
+          memColArr[i * 3] = 1.0 * glow;
+          memColArr[i * 3 + 1] = (note.read ? 0.94 : 0.85) * glow;
+          memColArr[i * 3 + 2] = (note.read ? 1.0 : 0.58) * glow;
+
+          const el = this.memoryMarkerEls && this.memoryMarkerEls[i];
+          if (el) {
+            this.projVec.set(mx, my, mz).project(this.camera);
+            const inFront = this.projVec.z < 1 && this.projVec.z > -1;
+            const sx = (this.projVec.x + 1) * halfW;
+            const sy = (-this.projVec.y + 1) * halfH;
+            const onScreen =
+              !hideMarkers &&
+              inFront &&
+              sx > 28 &&
+              sx < window.innerWidth - 28 &&
+              sy > 72 &&
+              sy < window.innerHeight - 135;
+
+            if (onScreen) {
+              el.style.opacity = '1';
+              el.style.pointerEvents = 'auto';
+              el.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) translate(-50%, -50%)`;
+            } else {
+              el.style.opacity = '0';
+              el.style.pointerEvents = 'none';
+            }
+          }
+        }
+        this.memoryPosAttr.needsUpdate = true;
+        this.memoryColAttr.needsUpdate = true;
+
+        // 11. Animate Launched Dua / Wish Stars Orbiting the Binary System
+        const wPosArr = this.wishPosAttr.array;
+        const wColArr = this.wishColAttr.array;
+        for (let i = 0; i < this.maxWishStars; i++) {
+          const w = this.wishStars[i];
+          if (!w) {
+            wPosArr[i * 3 + 1] = -999;
+            continue;
+          }
+          if (w.launchProgress < 1.0) {
+            w.launchProgress = Math.min(1.0, w.launchProgress + dt * 0.65);
+          }
+          const ease = 1 - Math.pow(1 - w.launchProgress, 3);
+          const a = w.angle + t * w.speed;
+          const tx = Math.cos(a) * w.orbitR * THREE.MathUtils.lerp(1.0, 0.58, this.convergence);
+          const ty = w.yOff + Math.sin(t * 1.4 + i) * 0.35;
+          const tz = Math.sin(a) * w.orbitR * THREE.MathUtils.lerp(1.0, 0.58, this.convergence);
+
+          wPosArr[i * 3] = THREE.MathUtils.lerp(0, tx, ease);
+          wPosArr[i * 3 + 1] = THREE.MathUtils.lerp(-14, ty, ease);
+          wPosArr[i * 3 + 2] = THREE.MathUtils.lerp(6, tz, ease);
+
+          const tw = 0.78 + Math.sin(t * 3.0 + i * 0.9) * 0.22;
+          wColArr[i * 3] = 1.0 * tw;
+          wColArr[i * 3 + 1] = 0.9 * tw;
+          wColArr[i * 3 + 2] = 0.72 * tw;
+        }
+        this.wishPosAttr.needsUpdate = true;
+        this.wishColAttr.needsUpdate = true;
+
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    // Boot cleanly on window load
+    window.addEventListener('load', () => {
+      new BinaryStarsExperience();
+    });
+  </script>
+</body>
+</html>
